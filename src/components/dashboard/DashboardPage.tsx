@@ -6,7 +6,6 @@ import { useGameStore } from '../../store/gameStore';
 import { useUIStore } from '../../store/uiStore';
 import { useStats } from '../../hooks/useStats';
 import { seriesService } from '../../core/services/seriesService';
-import type { SeriesStats } from '../../core/types/game';
 import EmptyState from '../ui/EmptyState';
 import Button from '../ui/Button';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';

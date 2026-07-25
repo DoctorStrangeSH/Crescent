@@ -28,7 +28,6 @@ function GameForm({ form, children }: GameFormProps) {
   const { register, formState: { errors }, watch, setValue } = form;
   const status = watch('status');
   const myRating = watch('myRating');
-  const hasProtectors = watch('hasProtectors');
   const photos = watch('photos');
 
   const fileInputRef = useRef<HTMLInputElement>(null);

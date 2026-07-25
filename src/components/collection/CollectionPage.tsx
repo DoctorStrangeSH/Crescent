@@ -9,8 +9,7 @@ import type { SeriesStats, BoardGame } from '../../core/types/game';
 import AddSeriesModal from '../forms/AddSeriesModal';
 import EmptyState from '../ui/EmptyState';
 import Button from '../ui/Button';
-import Badge from '../ui/Badge';
-import { Plus, Library, Layers, GripVertical, Trash2, Filter } from 'lucide-react';
+import { Plus, Library, Layers, GripVertical, Trash2 } from 'lucide-react';
 
 type FilterMode = 'all' | 'owned' | 'wishlist';
 

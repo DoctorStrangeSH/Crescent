@@ -1,7 +1,7 @@
 // Файл: src/components/pages/SharedPage.tsx
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Package, Heart, Star, TrendingUp } from 'lucide-react';
+import { Package, Heart, TrendingUp } from 'lucide-react';
 
 interface SharedGame {
   title: string;

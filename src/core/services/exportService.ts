@@ -1,7 +1,7 @@
 // Файл: src/core/services/exportService.ts
 import * as XLSX from 'xlsx';
 import { db } from '../db/database';
-import type { BoardGame, GameSeries } from '../types/game';
+import type { BoardGame } from '../types/game';
 
 function gamesToRows(games: BoardGame[], seriesMap: Map<string, string>): any[][] {
   const statusLabels: Record<string, string> = {
