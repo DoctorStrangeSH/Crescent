@@ -5,17 +5,26 @@ import AddGameModal from './components/forms/AddGameModal';
 import CollectionPage from './components/collection/CollectionPage';
 import DashboardPage from './components/dashboard/DashboardPage';
 import SeriesDetailPage from './components/series/SeriesDetailPage';
+import SharedPage from './components/pages/SharedPage';
 
 function App() {
   return (
     <BrowserRouter>
-      <AppLayout>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/collection" element={<CollectionPage />} />
-          <Route path="/series/:seriesId" element={<SeriesDetailPage />} />
-        </Routes>
-      </AppLayout>
+      <Routes>
+        {/* Публичная страница — без лаута */}
+        <Route path="/shared" element={<SharedPage />} />
+
+        {/* Основное приложение */}
+        <Route path="/*" element={
+          <AppLayout>
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/collection" element={<CollectionPage />} />
+              <Route path="/series/:seriesId" element={<SeriesDetailPage />} />
+            </Routes>
+          </AppLayout>
+        } />
+      </Routes>
       <AddGameModal />
     </BrowserRouter>
   );

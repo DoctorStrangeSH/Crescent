@@ -7,7 +7,8 @@ import { seriesService } from '../../core/services/seriesService';
 import type { BoardGame, GameSeries, SeriesStats } from '../../core/types/game';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
-import { ArrowLeft, Plus, Check, ShoppingCart, Star, Shield, Edit3, Trash2, GripVertical, FolderPlus, Layers, Package } from 'lucide-react';
+import BulkAddModal from '../forms/BulkAddModal';
+import { ArrowLeft, Plus, Check, ShoppingCart, Star, Shield, Edit3, Trash2, GripVertical, FolderPlus, Layers, Package, Settings, Tags, StickyNote, FileText } from 'lucide-react';
 
 function SeriesDetailPage() {
   const { seriesId } = useParams<{ seriesId: string }>();
@@ -18,6 +19,7 @@ function SeriesDetailPage() {
   const deleteCycle = useGameStore((s) => s.deleteCycle);
   const updateGame = useGameStore((s) => s.updateGame);
   const deleteGame = useGameStore((s) => s.deleteGame);
+  const updateSeries = useGameStore((s) => s.updateSeries);
   const loadAll = useGameStore((s) => s.loadAll);
   const openAddGameModal = useUIStore((s) => s.openAddGameModal);
 
@@ -25,11 +27,23 @@ function SeriesDetailPage() {
   const [stats, setStats] = useState<SeriesStats | null>(null);
   const [showAddCycle, setShowAddCycle] = useState(false);
   const [newCycleTitle, setNewCycleTitle] = useState('');
+  const [dragGameId, setDragGameId] = useState<string | null>(null);
+  const [dragOverGameId, setDragOverGameId] = useState<string | null>(null);
+  const [isEditingSeries, setIsEditingSeries] = useState(false);
+  const [editNotes, setEditNotes] = useState('');
+  const [editTags, setEditTags] = useState('');
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
 
   useEffect(() => {
     if (seriesId) {
       loadAll();
-      seriesService.getById(seriesId).then((s) => { if (s) setSeries(s); });
+      seriesService.getById(seriesId).then((s) => {
+        if (s) {
+          setSeries(s);
+          setEditNotes(s.notes || '');
+          setEditTags((s.tags || []).join(', '));
+        }
+      });
       seriesService.getStats(seriesId).then(setStats);
     }
   }, [seriesId, games.length]);
@@ -63,21 +77,58 @@ function SeriesDetailPage() {
     openAddGameModal(seriesId);
   };
 
-  // Drag and drop
-  const handleDragStart = (e: React.DragEvent, gameId: string) => {
-    e.dataTransfer.setData('text/plain', gameId);
-    e.dataTransfer.effectAllowed = 'move';
+  const handleSaveNotes = async () => {
+    await updateSeries(seriesId, {
+      notes: editNotes,
+      tags: editTags.split(',').map(t => t.trim()).filter(t => t),
+    });
+    setIsEditingSeries(false);
   };
 
-  const handleDropOnCycle = async (e: React.DragEvent, cycleId: string | null) => {
+  // Drag-and-drop: сортировка внутри цикла
+  const handleSortDragStart = (e: React.DragEvent, gameId: string) => {
+    e.dataTransfer.setData('text/plain', gameId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDragGameId(gameId);
+  };
+
+  const handleSortDragOver = (e: React.DragEvent, gameId: string) => {
     e.preventDefault();
-    const gameId = e.dataTransfer.getData('text/plain');
-    if (gameId) {
-      await updateGame(gameId, { cycleId });
+    e.dataTransfer.dropEffect = 'move';
+    if (dragGameId && dragGameId !== gameId) {
+      setDragOverGameId(gameId);
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleSortDragLeave = () => setDragOverGameId(null);
+
+  const handleSortDrop = async (e: React.DragEvent, targetGameId: string) => {
+    e.preventDefault();
+    const gameId = e.dataTransfer.getData('text/plain');
+    if (!gameId || gameId === targetGameId) return;
+    const draggedGame = games.find(g => g.id === gameId);
+    const targetGame = games.find(g => g.id === targetGameId);
+    if (draggedGame && targetGame) {
+      await updateGame(gameId, { sortOrder: targetGame.sortOrder });
+      await updateGame(targetGameId, { sortOrder: draggedGame.sortOrder });
+    }
+    setDragGameId(null);
+    setDragOverGameId(null);
+  };
+
+  const handleSortDragEnd = () => {
+    setDragGameId(null);
+    setDragOverGameId(null);
+  };
+
+  // Drag-and-drop: перемещение между циклами
+  const handleMoveToCycle = async (e: React.DragEvent, cycleId: string | null) => {
+    e.preventDefault();
+    const gameId = e.dataTransfer.getData('text/plain');
+    if (gameId) await updateGame(gameId, { cycleId });
+  };
+
+  const handleMoveDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
@@ -90,10 +141,62 @@ function SeriesDetailPage() {
           <ArrowLeft className="w-4 h-4 text-crescent-muted" />
         </button>
         <div className="flex-1">
-          <h1 className="text-xl sm:text-2xl font-title font-bold text-gray-900 dark:text-gray-100">{series.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-title font-bold text-gray-900 dark:text-gray-100">{series.title}</h1>
+            <button
+              onClick={() => setIsEditingSeries(!isEditingSeries)}
+              className="p-1.5 rounded-lg text-crescent-muted hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Настройки серии"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
           {series.titleOriginal && <p className="text-sm text-crescent-muted mt-0.5">{series.titleOriginal}</p>}
+          {series.description && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{series.description}</p>}
         </div>
       </div>
+
+      {/* Панель редактирования заметок и тегов */}
+      {isEditingSeries && (
+        <div className="bg-gray-50 dark:bg-gray-800/30 rounded-2xl p-4 space-y-3 animate-slide-up">
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-crescent-muted mb-1">
+              <StickyNote className="w-3.5 h-3.5" /> Заметки к серии
+            </label>
+            <textarea
+              value={editNotes}
+              onChange={e => setEditNotes(e.target.value)}
+              rows={2}
+              placeholder="Где купить недостающие допы, ссылки на магазины, заметки..."
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-crescent-accent/20 resize-none"
+            />
+          </div>
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-crescent-muted mb-1">
+              <Tags className="w-3.5 h-3.5" /> Теги (через запятую)
+            </label>
+            <input
+              value={editTags}
+              onChange={e => setEditTags(e.target.value)}
+              placeholder="карточная, кооператив, хардкор"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-crescent-accent/20"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSaveNotes}>Сохранить</Button>
+            <Button size="sm" variant="ghost" onClick={() => setIsEditingSeries(false)}>Отмена</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Теги серии */}
+      {series.tags && series.tags.length > 0 && !isEditingSeries && (
+        <div className="flex flex-wrap gap-1.5">
+          {series.tags.map(tag => (
+            <Badge key={tag} variant="purple" size="sm">{tag}</Badge>
+          ))}
+        </div>
+      )}
 
       {/* Статистика */}
       {stats && (
@@ -121,10 +224,13 @@ function SeriesDetailPage() {
       {/* Кнопки */}
       <div className="flex flex-wrap gap-2">
         <Button icon={<Plus className="w-4 h-4" />} onClick={handleAddGameToSeries}>
-          Добавить игру в серию
+          Добавить игру
         </Button>
         <Button icon={<FolderPlus className="w-4 h-4" />} variant="secondary" onClick={() => setShowAddCycle(!showAddCycle)}>
           Создать цикл
+        </Button>
+        <Button icon={<FileText className="w-4 h-4" />} variant="ghost" size="sm" onClick={() => setShowBulkAdd(true)}>
+          Массово
         </Button>
       </div>
 
@@ -164,8 +270,8 @@ function SeriesDetailPage() {
 
             <div
               className="border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-2xl p-2 min-h-[60px] transition-all hover:border-gray-200 dark:hover:border-gray-700"
-              onDrop={(e) => handleDropOnCycle(e, cycle.id)}
-              onDragOver={handleDragOver}
+              onDrop={(e) => handleMoveToCycle(e, cycle.id)}
+              onDragOver={handleMoveDragOver}
             >
               {cycleGames.length === 0 ? (
                 <p className="text-xs text-crescent-muted text-center py-3">Перетащите игры сюда</p>
@@ -175,10 +281,15 @@ function SeriesDetailPage() {
                     <DraggableGameRow
                       key={game.id}
                       game={game}
+                      isDragOver={dragOverGameId === game.id}
                       onToggle={() => handleToggleStatus(game)}
                       onEdit={() => useUIStore.getState().openEditGameModal(game.id)}
                       onDelete={() => { if (window.confirm('Удалить игру?')) deleteGame(game.id); }}
-                      onDragStart={(e) => handleDragStart(e, game.id)}
+                      onDragStart={(e) => handleSortDragStart(e, game.id)}
+                      onDragOver={(e) => handleSortDragOver(e, game.id)}
+                      onDragLeave={handleSortDragLeave}
+                      onDrop={(e) => handleSortDrop(e, game.id)}
+                      onDragEnd={handleSortDragEnd}
                     />
                   ))}
                 </div>
@@ -197,11 +308,11 @@ function SeriesDetailPage() {
         </div>
       )}
 
-      {/* Одиночные игры внутри серии */}
+      {/* Одиночные внутри серии */}
       <div
         className="border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-2xl p-2 min-h-[60px] transition-all hover:border-gray-200 dark:hover:border-gray-700"
-        onDrop={(e) => handleDropOnCycle(e, null)}
-        onDragOver={handleDragOver}
+        onDrop={(e) => handleMoveToCycle(e, null)}
+        onDragOver={handleMoveDragOver}
       >
         {uncycledGames.length === 0 && seriesCycles.length > 0 ? (
           <p className="text-xs text-crescent-muted text-center py-3">Все игры распределены по циклам</p>
@@ -211,10 +322,15 @@ function SeriesDetailPage() {
               <DraggableGameRow
                 key={game.id}
                 game={game}
+                isDragOver={false}
                 onToggle={() => handleToggleStatus(game)}
                 onEdit={() => useUIStore.getState().openEditGameModal(game.id)}
                 onDelete={() => { if (window.confirm('Удалить игру?')) deleteGame(game.id); }}
-                onDragStart={(e) => handleDragStart(e, game.id)}
+                onDragStart={(e) => handleSortDragStart(e, game.id)}
+                onDragOver={() => {}}
+                onDragLeave={() => {}}
+                onDrop={() => {}}
+                onDragEnd={handleSortDragEnd}
               />
             ))}
           </div>
@@ -228,6 +344,9 @@ function SeriesDetailPage() {
           <p className="text-xs text-crescent-muted mt-1">Добавьте первую игру или создайте цикл</p>
         </div>
       )}
+
+      {/* Модалка массового добавления */}
+      <BulkAddModal isOpen={showBulkAdd} onClose={() => setShowBulkAdd(false)} seriesId={seriesId} />
     </div>
   );
 }
@@ -246,19 +365,23 @@ function StatBadge({ label, value, color = 'default' }: { label: string; value: 
   );
 }
 
-function DraggableGameRow({ game, onToggle, onEdit, onDelete, onDragStart }: {
-  game: BoardGame;
-  onToggle: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onDragStart: (e: React.DragEvent) => void;
+function DraggableGameRow({ game, isDragOver, onToggle, onEdit, onDelete, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd }: {
+  game: BoardGame; isDragOver: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void;
+  onDragStart: (e: React.DragEvent) => void; onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void; onDrop: (e: React.DragEvent) => void; onDragEnd: () => void;
 }) {
   const isOwned = game.status === 'owned';
   return (
     <div
       draggable
       onDragStart={onDragStart}
-      className={`flex items-center gap-2 p-2 rounded-xl border transition-all cursor-grab active:cursor-grabbing active:opacity-70 ${
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className={`flex items-center gap-2 p-2 rounded-xl border transition-all cursor-grab active:cursor-grabbing ${
+        isDragOver ? 'border-crescent-accent bg-crescent-accent/5 scale-[1.02]' : ''
+      } ${
         isOwned
           ? 'bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-100 dark:border-emerald-900/30'
           : 'bg-white dark:bg-crescent-card-dark border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700'
@@ -272,30 +395,28 @@ function DraggableGameRow({ game, onToggle, onEdit, onDelete, onDragStart }: {
         className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-all ${
           isOwned ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 hover:bg-amber-100 dark:hover:bg-amber-900/30'
         }`}
-        title={isOwned ? 'Есть' : 'Хочу купить'}
       >
         {isOwned ? <Check className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
       </button>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{game.title}</p>
+        {game.tags && game.tags.length > 0 && (
+          <div className="flex gap-1 mt-0.5">
+            {game.tags.slice(0, 3).map(tag => (
+              <span key={tag} className="text-[9px] text-crescent-muted bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{tag}</span>
+            ))}
+          </div>
+        )}
       </div>
       {game.isFavorite && <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />}
       {game.hasProtectors && <Shield className="w-3 h-3 text-purple-400 flex-shrink-0" />}
       {game.myRating && <span className="text-[11px] text-crescent-muted flex-shrink-0">⭐{game.myRating}</span>}
-      <button
-        type="button"
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-      >
+      <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onEdit(); }}
+        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
         <Edit3 className="w-3 h-3" />
       </button>
-      <button
-        type="button"
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
-      >
+      <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        className="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950">
         <Trash2 className="w-3 h-3" />
       </button>
     </div>

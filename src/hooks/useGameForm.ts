@@ -40,6 +40,7 @@ const gameFormSchema = z.object({
   acquisitionSource: z.string().optional().default(''),
   isBaseGame: z.boolean().optional().default(true),
   sortOrder: z.number().int().optional().default(0),
+  photos: z.array(z.string()).optional().default([]),
 });
 
 export type GameFormData = z.infer<typeof gameFormSchema>;
@@ -84,6 +85,7 @@ export function formDataToCreateData(data: GameFormData): CreateBoardGameData {
     acquisitionSource: data.acquisitionSource || '',
     isBaseGame: data.isBaseGame ?? true,
     sortOrder: data.sortOrder ?? 0,
+    photos: data.photos || [],
   };
 }
 
@@ -127,6 +129,7 @@ export function useGameForm(defaultValues?: Partial<GameFormData>) {
       acquisitionSource: '',
       isBaseGame: true,
       sortOrder: 0,
+      photos: [],
       ...defaultValues,
     },
   });

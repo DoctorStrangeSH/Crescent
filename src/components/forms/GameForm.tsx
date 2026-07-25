@@ -1,8 +1,10 @@
 // Файл: src/components/forms/GameForm.tsx
-import { type ReactNode } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import type { GameFormData } from '../../hooks/useGameForm';
 import Rating from '../ui/Rating';
+import Button from '../ui/Button';
+import { Image, Upload } from 'lucide-react';
 
 interface GameFormProps {
   form: UseFormReturn<GameFormData>;
@@ -26,9 +28,79 @@ function GameForm({ form, children }: GameFormProps) {
   const { register, formState: { errors }, watch, setValue } = form;
   const status = watch('status');
   const myRating = watch('myRating');
+  const hasProtectors = watch('hasProtectors');
+  const photos = watch('photos');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(
+    Array.isArray(photos) && photos.length > 0 ? photos[0] : null
+  );
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      alert('Файл слишком большой. Максимум 3 МБ.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setPhotoPreview(result);
+      setValue('photos', [result] as any);
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="space-y-5">
+      {/* Обложка игры */}
+      <div>
+        <label className={labelClass}>Фото игры</label>
+        <div className="flex items-center gap-3">
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors overflow-hidden flex-shrink-0"
+          >
+            {photoPreview ? (
+              <img src={photoPreview} alt="Фото" className="w-full h-full object-cover" />
+            ) : (
+              <Image className="w-5 h-5 text-crescent-muted" />
+            )}
+          </div>
+          <div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={<Upload className="w-3.5 h-3.5" />}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Загрузить
+            </Button>
+            <p className="text-[10px] text-crescent-muted mt-1">JPG, PNG до 3 МБ</p>
+            {photoPreview && (
+              <button
+                type="button"
+                onClick={() => { setPhotoPreview(null); setValue('photos', [] as any); }}
+                className="text-[10px] text-red-500 hover:underline mt-1"
+              >
+                Удалить
+              </button>
+            )}
+          </div>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoChange}
+          className="hidden"
+        />
+      </div>
+
       {/* Основное */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Название *" error={errors.title?.message}>
@@ -116,7 +188,7 @@ function GameForm({ form, children }: GameFormProps) {
         </Field>
       </div>
 
-      {/* Жанры */}
+      {/* Жанры и механики */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Жанры (через запятую)">
           <input {...register('genres')} className={inputClass} placeholder="стратегия, карточная" />

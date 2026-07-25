@@ -1,25 +1,29 @@
 // Файл: src/components/collection/CollectionPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useUIStore } from '../../store/uiStore';
 import { seriesService } from '../../core/services/seriesService';
-import type { SeriesStats } from '../../core/types/game';
+import type { SeriesStats, BoardGame } from '../../core/types/game';
 import AddSeriesModal from '../forms/AddSeriesModal';
 import EmptyState from '../ui/EmptyState';
 import Button from '../ui/Button';
-import { Plus, Library, Layers, GripVertical } from 'lucide-react';
+import Badge from '../ui/Badge';
+import { Plus, Library, Layers, GripVertical, Trash2, Filter } from 'lucide-react';
+
+type FilterMode = 'all' | 'owned' | 'wishlist';
 
 function CollectionPage() {
   const navigate = useNavigate();
-  const { series, games, loadAll, updateGame } = useGameStore();
+  const { series, games, loadAll, updateGame, deleteGame } = useGameStore();
   const openAddGameModal = useUIStore(s => s.openAddGameModal);
 
   const [isSeriesModalOpen, setIsSeriesModalOpen] = useState(false);
   const [seriesStats, setSeriesStats] = useState<Record<string, SeriesStats>>({});
   const [dragOverSeriesId, setDragOverSeriesId] = useState<string | null>(null);
   const [draggedGameId, setDraggedGameId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterMode>('all');
 
   useEffect(() => { loadAll(); }, []);
 
@@ -32,10 +36,16 @@ function CollectionPage() {
     loadStats();
   }, [series, games]);
 
-  const standaloneGames = games.filter(g => g.seriesId === null);
-  const hasContent = series.length > 0 || standaloneGames.length > 0;
+  const standaloneGames = useMemo(() => {
+    let filtered = games.filter(g => g.seriesId === null);
+    if (filter === 'owned') filtered = filtered.filter(g => g.status === 'owned');
+    if (filter === 'wishlist') filtered = filtered.filter(g => g.status === 'wishlist');
+    return filtered;
+  }, [games, filter]);
 
-  // 🟢 Drag: начали тащить игру
+  const hasContent = series.length > 0 || games.filter(g => g.seriesId === null).length > 0;
+
+  // Drag-and-drop
   const handleGameDragStart = (e: React.DragEvent, gameId: string) => {
     e.dataTransfer.setData('text/plain', gameId);
     e.dataTransfer.effectAllowed = 'move';
@@ -47,7 +57,6 @@ function CollectionPage() {
     setDragOverSeriesId(null);
   };
 
-  // 🟢 Drag over: навели на серию
   const handleSeriesDragOver = (e: React.DragEvent, seriesId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -64,7 +73,6 @@ function CollectionPage() {
   const handleSeriesDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Проверяем, что действительно покинули зону (не перешли на дочерний элемент)
     const target = e.currentTarget as HTMLElement;
     const relatedTarget = e.relatedTarget as HTMLElement;
     if (!target.contains(relatedTarget)) {
@@ -72,7 +80,6 @@ function CollectionPage() {
     }
   };
 
-  // 🟢 Drop: бросили на серию
   const handleSeriesDrop = async (e: React.DragEvent, seriesId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -84,7 +91,6 @@ function CollectionPage() {
     setDraggedGameId(null);
   };
 
-  // 🟢 Drag over / drop: зона одиночных игр (отвязать от серии)
   const handleStandaloneDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -99,6 +105,29 @@ function CollectionPage() {
       await updateGame(gameId, { seriesId: null, cycleId: null });
     }
     setDraggedGameId(null);
+  };
+
+  // 🆕 Переключение статуса
+  const handleToggleStatus = async (e: React.MouseEvent, game: BoardGame) => {
+    e.stopPropagation();
+    const newStatus = game.status === 'owned' ? 'wishlist' : 'owned';
+    await updateGame(game.id, { status: newStatus });
+  };
+
+  // 🆕 Удаление игры
+  const handleDeleteGame = async (e: React.MouseEvent, gameId: string, title: string) => {
+    e.stopPropagation();
+    if (window.confirm(`Удалить «${title}»?`)) {
+      await deleteGame(gameId);
+    }
+  };
+
+  // 🆕 Статистика по фильтру
+  const allStandalone = games.filter(g => g.seriesId === null);
+  const filterCounts = {
+    all: allStandalone.length,
+    owned: allStandalone.filter(g => g.status === 'owned').length,
+    wishlist: allStandalone.filter(g => g.status === 'wishlist').length,
   };
 
   if (!hasContent) {
@@ -131,7 +160,7 @@ function CollectionPage() {
           <h1 className="text-2xl font-title font-bold text-gray-900 dark:text-gray-100">Коллекция</h1>
           <p className="text-sm text-crescent-muted mt-0.5">
             {series.length} {series.length === 1 ? 'серия' : series.length >= 2 && series.length <= 4 ? 'серии' : 'серий'}
-            {standaloneGames.length > 0 && ` · ${standaloneGames.length} игр`}
+            {allStandalone.length > 0 && ` · ${allStandalone.length} игр`}
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
@@ -181,7 +210,6 @@ function CollectionPage() {
                       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100 dark:bg-gray-800">
                         <div className="h-full bg-crescent-accent transition-all duration-700 rounded-r-full" style={{ width: `${st.completionPercent}%` }} />
                       </div>
-                      {/* Оверлей при наведении с игрой */}
                       {isDragOver && (
                         <div className="absolute inset-0 bg-crescent-accent/20 flex items-center justify-center backdrop-blur-[1px]">
                           <span className="text-sm font-bold text-white bg-crescent-accent px-3 py-1.5 rounded-xl shadow-lg">
@@ -205,65 +233,105 @@ function CollectionPage() {
         </div>
       )}
 
-      {/* Одиночные игры */}
-      {standaloneGames.length > 0 && (
-        <div
-          onDragOver={handleStandaloneDragOver}
-          onDrop={handleStandaloneDrop}
-        >
-          <h2 className="text-xs font-semibold text-crescent-muted uppercase tracking-widest mb-4">
-            Одиночные игры
-            <span className="ml-2 font-normal text-crescent-muted/50">— перетащите на серию выше</span>
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            <AnimatePresence mode="popLayout">
-              {standaloneGames.map(game => (
-                <motion.div
-                  key={game.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className={`rounded-2xl border transition-all duration-200 shadow-card dark:shadow-card-dark hover:shadow-card-hover dark:hover:shadow-card-hover-dark ${
-                    draggedGameId === game.id ? 'opacity-40 scale-95 ring-2 ring-crescent-accent' : ''
-                  } ${
-                    game.status === 'owned'
-                      ? 'bg-white dark:bg-crescent-card-dark border-gray-100/50 dark:border-gray-800/50'
-                      : 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/30'
+      {/* 🆕 Фильтры одиночных игр */}
+      {allStandalone.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold text-crescent-muted uppercase tracking-widest">
+              Одиночные игры
+              <span className="ml-2 font-normal text-crescent-muted/50">— перетащите на серию выше</span>
+            </h2>
+            {/* 🆕 Кнопки фильтров */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5">
+              {(['all', 'owned', 'wishlist'] as FilterMode[]).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setFilter(mode)}
+                  className={`px-3 py-1 text-[11px] font-medium rounded-lg transition-all ${
+                    filter === mode
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                      : 'text-crescent-muted hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
                 >
-                  <div
-                    draggable
-                    onDragStart={(e) => handleGameDragStart(e, game.id)}
-                    onDragEnd={handleGameDragEnd}
-                    className="cursor-grab active:cursor-grabbing p-4"
-                    onClick={(e) => {
-                      // Не открываем редактирование если был drag
-                      if (draggedGameId) {
-                        e.preventDefault();
-                        return;
-                      }
-                      useUIStore.getState().openEditGameModal(game.id);
-                    }}
+                  {mode === 'all' && `Все (${filterCounts.all})`}
+                  {mode === 'owned' && `✅ Есть (${filterCounts.owned})`}
+                  {mode === 'wishlist' && `🎯 Хочу (${filterCounts.wishlist})`}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div
+            className="border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-2xl p-3 min-h-[80px] transition-all hover:border-gray-200 dark:hover:border-gray-700"
+            onDrop={handleStandaloneDrop}
+            onDragOver={handleStandaloneDragOver}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <AnimatePresence mode="popLayout">
+                {standaloneGames.map(game => (
+                  <motion.div
+                    key={game.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className={`rounded-2xl border transition-all duration-200 shadow-card dark:shadow-card-dark hover:shadow-card-hover dark:hover:shadow-card-hover-dark group ${
+                      draggedGameId === game.id ? 'opacity-40 scale-95 ring-2 ring-crescent-accent' : ''
+                    } ${
+                      game.status === 'owned'
+                        ? 'bg-white dark:bg-crescent-card-dark border-gray-100/50 dark:border-gray-800/50'
+                        : 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/30'
+                    }`}
                   >
-                    <div className="flex items-start gap-2">
-                      <GripVertical className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0 mt-0.5 pointer-events-none" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 line-clamp-2">{game.title}</h3>
-                          <span className="text-base flex-shrink-0">{game.status === 'owned' ? '✅' : '🎯'}</span>
-                        </div>
-                        {game.myRating && (
-                          <div className="flex items-center gap-1 mt-1.5 text-[11px] text-crescent-muted">
-                            ⭐ {game.myRating}/10
+                    <div
+                      draggable
+                      onDragStart={(e) => handleGameDragStart(e, game.id)}
+                      onDragEnd={handleGameDragEnd}
+                      className="cursor-grab active:cursor-grabbing p-4"
+                    >
+                      <div className="flex items-start gap-2">
+                        <GripVertical className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0 mt-0.5 pointer-events-none" />
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => useUIStore.getState().openEditGameModal(game.id)}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 line-clamp-2">{game.title}</h3>
                           </div>
-                        )}
+                          {game.myRating && (
+                            <div className="flex items-center gap-1 mt-1.5 text-[11px] text-crescent-muted">
+                              ⭐ {game.myRating}/10
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                          {/* 🆕 Кнопка переключения статуса */}
+                          <button
+                            onClick={(e) => handleToggleStatus(e, game)}
+                            className="text-base hover:scale-110 transition-transform"
+                            title={game.status === 'owned' ? 'Есть в коллекции' : 'Хочу купить'}
+                          >
+                            {game.status === 'owned' ? '✅' : '🎯'}
+                          </button>
+                          {/* 🆕 Кнопка удаления */}
+                          <button
+                            onClick={(e) => handleDeleteGame(e, game.id, game.title)}
+                            className="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Удалить"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+            {standaloneGames.length === 0 && (
+              <p className="text-xs text-crescent-muted text-center py-4">
+                {filter !== 'all' ? 'Нет игр по выбранному фильтру' : 'Все игры распределены по сериям 🎉'}
+              </p>
+            )}
           </div>
         </div>
       )}

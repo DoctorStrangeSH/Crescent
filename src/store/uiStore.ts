@@ -21,8 +21,12 @@ interface UIState {
   closeGameModal: () => void;
 }
 
+// Загружаем тему из localStorage
+const savedTheme = (typeof window !== 'undefined' && localStorage.getItem('crescent-theme')) as Theme | null;
+const initialTheme: Theme = savedTheme || 'light';
+
 export const useUIStore = create<UIState>((set) => ({
-  theme: 'light',
+  theme: initialTheme,
   viewMode: 'grid',
   isSidebarOpen: true,
   isGameModalOpen: false,
@@ -33,12 +37,14 @@ export const useUIStore = create<UIState>((set) => ({
     set((state) => {
       const newTheme = state.theme === 'light' ? 'dark' : 'light';
       document.documentElement.classList.toggle('dark', newTheme === 'dark');
+      localStorage.setItem('crescent-theme', newTheme);
       return { theme: newTheme };
     });
   },
 
   setTheme: (theme) => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('crescent-theme', theme);
     set({ theme });
   },
 
