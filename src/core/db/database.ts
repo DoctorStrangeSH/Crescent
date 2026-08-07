@@ -1,0 +1,42 @@
+import Dexie, { type Table } from 'dexie';
+import type { Game, Cycle } from '../types/game';
+
+class CrescentDB extends Dexie {
+  games!: Table<Game, string>;
+  cycles!: Table<Cycle, string>;
+
+  constructor() {
+    super('CrescentDBv3');
+
+    this.version(1).stores({
+      games: `
+        id,
+        parentId,
+        cycleId,
+        title,
+        status,
+        language,
+        complexity,
+        purchasePrice,
+        hasProtectors,
+        isFavorite,
+        sortOrder,
+        createdAt,
+        updatedAt,
+        *genres,
+        *mechanics,
+        *tags
+      `,
+      cycles: `
+        id,
+        parentGameId,
+        title,
+        sortOrder,
+        createdAt,
+        updatedAt
+      `
+    });
+  }
+}
+
+export const db = new CrescentDB();
