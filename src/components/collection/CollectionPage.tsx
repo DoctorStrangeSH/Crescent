@@ -7,8 +7,7 @@ import { gameService } from '../../core/services/gameService';
 import type { Game, GameStats } from '../../core/types/game';
 import EmptyState from '../ui/EmptyState';
 import Button from '../ui/Button';
-import Badge from '../ui/Badge';
-import { Plus, Library, ChevronRight, Star, Shield, Trash2, Package } from 'lucide-react';
+import { Plus, Library, Star, Shield, Trash2, Package } from 'lucide-react';
 
 function CollectionPage() {
   const navigate = useNavigate();

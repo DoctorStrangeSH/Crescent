@@ -22,8 +22,6 @@ export function useStats(): DashboardStats {
     const owned = games.filter(g => g.status === 'owned');
     const wishlist = games.filter(g => g.status === 'wishlist');
     const totalValue = owned.reduce((sum, g) => sum + (g.purchasePrice || 0), 0);
-    const rated = owned.filter(g => g.myRating !== null);
-    const avg = rated.length > 0 ? rated.reduce((sum, g) => sum + (g.myRating || 0), 0) / rated.length : null;
     const withoutProtectors = owned.filter(g => !g.hasProtectors).length;
     const favorites = games.filter(g => g.isFavorite).length;
 
@@ -32,7 +30,7 @@ export function useStats(): DashboardStats {
       ownedGames: owned.length,
       wishlistGames: wishlist.length,
       totalValue,
-      averageRating: avg,
+      averageRating: null,
       withoutProtectors,
       favorites,
       rootGames: root.length,

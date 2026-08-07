@@ -10,7 +10,7 @@ import { Package, Heart, DollarSign, Plus, Library, TrendingUp, Shield } from 'l
 
 function DashboardPage() {
   const navigate = useNavigate();
-  const { games, loadAll } = useGameStore();
+  const { loadAll } = useGameStore();
   const openAddGameModal = useUIStore(s => s.openAddGameModal);
   const stats = useStats();
 
@@ -41,7 +41,6 @@ function DashboardPage() {
         <Button icon={<Plus className="w-4 h-4" />} onClick={() => openAddGameModal()} className="w-full sm:w-auto">Добавить игру</Button>
       </div>
 
-      {/* Общий прогресс */}
       <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-crescent-accent" />Общий прогресс</h3>
@@ -53,7 +52,6 @@ function DashboardPage() {
         <p className="text-xs text-white/40 mt-2">{stats.ownedGames} из {stats.totalGames} игр</p>
       </div>
 
-      {/* Карточки */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Всего игр" value={stats.totalGames} subtitle={`${stats.rootGames} базовых + ${stats.totalExpansions} допов`} icon={<Package className="w-4 h-4" />} />
         <StatCard label="В коллекции" value={stats.ownedGames} subtitle={`Хочу: ${stats.wishlistGames}`} icon={<Heart className="w-4 h-4" />} color="green" />
@@ -61,7 +59,6 @@ function DashboardPage() {
         <StatCard label="Без протекторов" value={stats.withoutProtectors} icon={<Shield className="w-4 h-4" />} color="purple" />
       </div>
 
-      {/* График */}
       {statusData.length > 0 && (
         <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-5">
           <h3 className="text-sm font-semibold text-white mb-4">Статус игр</h3>

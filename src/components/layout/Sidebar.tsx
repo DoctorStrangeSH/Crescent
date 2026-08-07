@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, LibraryBig, PlusCircle, X, Gamepad2 } from 'lucide-react';
+import { LayoutDashboard, LibraryBig, PlusCircle, X } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 
 const nav = [

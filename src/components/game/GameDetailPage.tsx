@@ -3,11 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { useUIStore } from '../../store/uiStore';
 import { gameService } from '../../core/services/gameService';
-import { cycleService } from '../../core/services/cycleService';
 import type { Game, Cycle, GameStats } from '../../core/types/game';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
-import EmptyState from '../ui/EmptyState';
 import { ArrowLeft, Plus, Check, ShoppingCart, Star, Shield, Edit3, Trash2, FolderPlus, Layers, Package, Move, Image, ChevronDown, ChevronRight } from 'lucide-react';
 
 function GameDetailPage() {
@@ -25,7 +23,7 @@ function GameDetailPage() {
   useEffect(() => {
     if (gameId) {
       loadAll();
-      gameService.getById(gameId).then(setGame);
+      gameService.getById(gameId).then(g => { if (g) setGame(g); });
       gameService.getStats(gameId).then(setStats);
     }
   }, [gameId, games.length]);
@@ -71,7 +69,6 @@ function GameDetailPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-4xl mx-auto">
-      {/* Шапка */}
       <div className="flex items-start gap-4">
         <button onClick={() => navigate('/collection')} className="p-2 rounded-xl hover:bg-white/10 mt-1"><ArrowLeft className="w-4 h-4 text-white/60" /></button>
         <div className="flex-1">
@@ -99,7 +96,6 @@ function GameDetailPage() {
         </div>
       </div>
 
-      {/* Статистика */}
       {stats && isParent && (
         <>
           <div className="grid grid-cols-3 gap-3">
@@ -114,7 +110,6 @@ function GameDetailPage() {
         </>
       )}
 
-      {/* Инфо */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm text-white/50">
         {game.playerCountMin && <span>👥 {game.playerCountMin}-{game.playerCountMax} игроков</span>}
         {game.playTimeMin && <span>⏱ {game.playTimeMin}-{game.playTimeMax} мин</span>}
@@ -132,7 +127,6 @@ function GameDetailPage() {
         </div>
       )}
 
-      {/* Кнопки */}
       <div className="flex flex-wrap gap-2">
         <Button icon={<Plus className="w-4 h-4" />} onClick={handleAddExpansion}>Добавить дополнение</Button>
         <Button icon={<FolderPlus className="w-4 h-4" />} variant="secondary" onClick={() => setShowAddCycle(!showAddCycle)}>Создать цикл</Button>
@@ -145,7 +139,6 @@ function GameDetailPage() {
         </div>
       )}
 
-      {/* Циклы */}
       {gameCycles.map(cycle => {
         const cg = expansions.filter(e => e.cycleId === cycle.id).sort((a, b) => a.sortOrder - b.sortOrder);
         const owned = cg.filter(e => e.status === 'owned').length;
@@ -171,7 +164,6 @@ function GameDetailPage() {
         );
       })}
 
-      {/* Одиночные дополнения */}
       {uncycledExpansions.length > 0 && (
         <div>
           {gameCycles.length > 0 && (
