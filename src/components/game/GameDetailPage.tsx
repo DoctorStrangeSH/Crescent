@@ -109,9 +109,10 @@ function GameDetailPage() {
     setDragOverGameId(null);
   };
 
-  // Дроп в зону — добавляем в конец
+  // Дроп в зону — добавляем в КОНЕЦ
   const handleDropOnZone = async (e: React.DragEvent, zone: string, cycleId?: string) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverZone(null);
     const draggedId = e.dataTransfer.getData('text/plain');
     if (!draggedId) return;
@@ -130,34 +131,34 @@ function GameDetailPage() {
     }
   };
 
-  // Дроп на игру — вставляем ПЕРЕД ней
+  // Дроп на игру — меняем местами (только в одной зоне)
   const handleDropOnGame = async (e: React.DragEvent, targetGame: Game) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOverGameId(null);
     const draggedId = e.dataTransfer.getData('text/plain');
     if (!draggedId || draggedId === targetGame.id) return;
+    const dragged = games.find(g => g.id === draggedId);
+    if (!dragged) return;
 
-    // Вставляем перед targetGame: все игры с sortOrder >= targetSortOrder сдвигаем на +1
-    const targetSortOrder = targetGame.sortOrder;
-    const sameZoneGames = expansions.filter(g =>
-      g.cycleId === targetGame.cycleId &&
-      !g.cycleId === !targetGame.cycleId &&
-      g.sortOrder >= 0 === targetGame.sortOrder >= 0
-    );
-
-    // Сдвигаем игры вниз
-    for (const g of sameZoneGames) {
-      if (g.sortOrder >= targetSortOrder && g.id !== draggedId) {
-        await updateGame(g.id, { sortOrder: g.sortOrder + 1 });
+    // Если в одной зоне — меняем местами
+    if (dragged.cycleId === targetGame.cycleId &&
+      (dragged.sortOrder >= 0) === (targetGame.sortOrder >= 0)) {
+      const temp = dragged.sortOrder;
+      await updateGame(draggedId, { sortOrder: targetGame.sortOrder });
+      await updateGame(targetGame.id, { sortOrder: temp });
+    } else {
+      // Разные зоны — добавляем ПЕРЕД targetGame
+      const sameZoneGames = expansions.filter(g =>
+        g.cycleId === targetGame.cycleId && g.sortOrder >= 0 === targetGame.sortOrder >= 0
+      );
+      for (const g of sameZoneGames) {
+        if (g.sortOrder >= targetGame.sortOrder) {
+          await updateGame(g.id, { sortOrder: g.sortOrder + 1 });
+        }
       }
+      await updateGame(draggedId, { cycleId: targetGame.cycleId, sortOrder: targetGame.sortOrder });
     }
-
-    // Ставим перетаскиваемую игру на место target
-    await updateGame(draggedId, {
-      cycleId: targetGame.cycleId,
-      sortOrder: targetSortOrder,
-    });
   };
 
   // Drag-and-drop циклов
@@ -317,7 +318,7 @@ function GameDetailPage() {
 
       {/* ОДИНОЧНЫЕ */}
       <DropZone title="Одиночные дополнения" icon="📋" zone="uncycled" dragOverZone={dragOverZone}
-        collapsed={false} onToggle={() => {}}
+        collapsed={false} onToggle={() => { }}
         onDrop={(e) => handleDropOnZone(e, 'uncycled')} onDragOver={(e) => handleZoneDragOver(e, 'uncycled')} onDragLeave={handleDragLeave}
         count={uncycledExpansions.length} owned={uncycledExpansions.filter(e => e.status === 'owned').length} collapsible={false}>
         {uncycledExpansions.map(e => (
