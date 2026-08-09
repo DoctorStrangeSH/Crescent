@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Menu, Moon, Sun, Search, X } from 'lucide-react';
+import BackupMenu from '../ui/BackupMenu';
+import ExportMenu from '../ui/ExportMenu';
 import { useUIStore } from '../../store/uiStore';
 import { useGameStore } from '../../store/gameStore';
 import { useNavigate } from 'react-router-dom';
@@ -48,6 +50,8 @@ function Header() {
       </div>
 
       <div className="flex items-center gap-1">
+        <ExportMenu />
+        <BackupMenu />
         <button onClick={toggleTheme} className="p-2 rounded-xl text-surface-muted hover:text-gray-700 dark:hover:text-white hover:bg-surface-hover dark:hover:bg-surface-hover-dark">
           {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
         </button>

@@ -36,7 +36,7 @@ function CollectionPage() {
     load();
   }, [games]);
 
-  const rootGames = games.filter(g => !g.collectionId && !g.cycleId);
+  const rootGames = games.filter(g => !g.collectionId);
   const collections = games.filter(g => g.kind === 'base' && g.collectionId === null);
   const standaloneGames = games.filter(g => g.kind === 'standalone' && g.collectionId === null);
 
