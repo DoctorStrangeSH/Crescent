@@ -38,13 +38,13 @@ function AddGameModal() {
     closeGameModal(); form.reset();
   };
 
-  const showKind = isInCollection ? true : (!isEditing || editing?.kind === 'collection');
+  const showKind = isEditing ? true : true;
   const showStatus = !isEditing || editing?.kind !== 'collection';
 
   return (
     <Modal isOpen={isGameModalOpen} onClose={closeGameModal} title={isEditing ? 'Редактировать' : isInCollection ? 'Добавить в хранилище' : 'Создать'} size="xl">
       <form onSubmit={form.handleSubmit(onSubmit)}>
-        <GameForm form={form} showKind={showKind} showStatus={showStatus} showDetails={showStatus}>
+        <GameForm form={form} showKind={showKind} showStatus={showStatus} showDetails={showStatus} isInsideCollection={isInCollection}>
           <div className="flex justify-end gap-2 pt-4 border-t border-surface-border dark:border-surface-border-dark mt-6">
             <Button type="button" variant="ghost" onClick={closeGameModal}>Отмена</Button>
             <Button type="submit" variant="primary">{isEditing ? 'Сохранить' : 'Добавить'}</Button>

@@ -6,7 +6,7 @@ import type { CreateGameData } from '../core/types/game';
 
 const schema = z.object({
   collectionId: z.string().nullable().optional(),
-  kind: z.enum(['collection', 'base', 'expansion', 'standalone']).optional().default('standalone'),
+  kind: z.enum(['collection', 'base', 'expansion', 'standalone']).optional().default('collection'),
   title: z.string().min(1, 'Название обязательно'),
   titleOriginal: z.string().optional().default(''),
   year: z.number().int().min(1900).max(2100).nullable().optional(),
@@ -38,7 +38,7 @@ function str(v: string) { return v.split(',').map(s => s.trim()).filter(s => s);
 export function toGame(data: GameFormData): CreateGameData {
   return {
     collectionId: data.collectionId ?? null,
-    kind: (data.kind || 'standalone') as 'collection' | 'base' | 'expansion' | 'standalone',
+    kind: (data.kind || 'collection') as 'collection' | 'base' | 'expansion' | 'standalone',
     title: data.title, titleOriginal: data.titleOriginal || '', year: data.year ?? null,
     publisher: data.publisher || '', designers: str(data.designers || ''), artists: str(data.artists || ''),
     playerCountMin: data.playerCountMin ?? 1, playerCountMax: data.playerCountMax ?? 4,
@@ -60,6 +60,15 @@ export function useGameForm(def?: Partial<GameFormData>) {
   const cid = useUIStore(s => s.collectionId);
   return useForm<GameFormData>({
     resolver: zodResolver(schema),
-    defaultValues: { collectionId: cid || null, kind: 'standalone', title: '', titleOriginal: '', year: null, publisher: '', designers: '', artists: '', playerCountMin: 1, playerCountMax: 4, playTimeMin: 30, playTimeMax: 60, complexity: 2, genres: '', mechanics: '', status: 'owned', purchaseDate: '', purchasePrice: null, language: 'russian', hasProtectors: false, notes: '', isFavorite: false, tags: '', photos: [], ...def },
+    defaultValues: {
+      collectionId: cid || null,
+      kind: cid ? 'expansion' : 'collection',
+      title: '', titleOriginal: '', year: null, publisher: '', designers: '', artists: '',
+      playerCountMin: 1, playerCountMax: 4, playTimeMin: 30, playTimeMax: 60,
+      complexity: 2, genres: '', mechanics: '', status: 'owned',
+      purchaseDate: '', purchasePrice: null, language: 'russian',
+      hasProtectors: false, notes: '', isFavorite: false, tags: '', photos: [],
+      ...def,
+    },
   });
 }

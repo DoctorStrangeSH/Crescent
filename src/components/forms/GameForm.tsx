@@ -4,7 +4,14 @@ import type { GameFormData } from '../../hooks/useGameForm';
 import Button from '../ui/Button';
 import { Image, Upload } from 'lucide-react';
 
-interface GameFormProps { form: UseFormReturn<GameFormData>; children?: ReactNode; showKind?: boolean; showStatus?: boolean; showDetails?: boolean; }
+interface GameFormProps {
+  form: UseFormReturn<GameFormData>;
+  children?: ReactNode;
+  showKind?: boolean;
+  showStatus?: boolean;
+  showDetails?: boolean;
+  isInsideCollection?: boolean;
+}
 
 const inputClass = "w-full px-3 py-2 bg-surface-hover dark:bg-surface-hover-dark border border-surface-border dark:border-surface-border-dark rounded-xl text-sm text-gray-900 dark:text-white placeholder-surface-muted focus:outline-none focus:ring-2 focus:ring-crescent-accent/50 transition-all";
 const labelClass = "block text-xs font-medium text-surface-muted mb-1";
@@ -13,7 +20,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   return <div><label className={labelClass}>{label}</label>{children}{error && <p className="mt-0.5 text-[11px] text-red-500">{error}</p>}</div>;
 }
 
-function GameForm({ form, children, showKind = true, showStatus = true, showDetails = true }: GameFormProps) {
+function GameForm({ form, children, showKind = true, showStatus = true, showDetails = true, isInsideCollection = false }: GameFormProps) {
   const { register, formState: { errors }, watch, setValue } = form;
   const status = watch('status');
   const kind = watch('kind');
@@ -28,6 +35,10 @@ function GameForm({ form, children, showKind = true, showStatus = true, showDeta
     reader.onload = ev => { const r = ev.target?.result as string; setPhotoPreview(r); setValue('photos', [r] as any); };
     reader.readAsDataURL(file);
   };
+
+  // Если создаём новое снаружи — всегда collection
+  // Если внутри коллекции — показываем выбор база/доп/соло
+  // При редактировании — показываем текущий тип
 
   return (
     <div className="space-y-5">
@@ -46,35 +57,48 @@ function GameForm({ form, children, showKind = true, showStatus = true, showDeta
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
       </div>
 
-      <Field label="Название *" error={errors.title?.message}><input {...register('title')} className={inputClass} /></Field>
+      <Field label="Название *" error={errors.title?.message}><input {...register('title')} className={inputClass} placeholder="Название хранилища или игры" /></Field>
       <Field label="Оригинальное название"><input {...register('titleOriginal')} className={inputClass} /></Field>
 
-      {showKind && (
+      {/* Выбор типа только внутри коллекции */}
+      {showKind && isInsideCollection && (
         <div className="bg-surface-hover dark:bg-surface-hover-dark rounded-2xl p-4">
-          <label className={labelClass}>Тип</label>
-          <div className="grid grid-cols-4 gap-2 mt-1">
-            <button type="button" onClick={() => setValue('kind', 'collection')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'collection' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-surface-card-dark text-surface-muted border'}`}>📚 Хранилище</button>
-            <button type="button" onClick={() => setValue('kind', 'base')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'base' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-surface-card-dark text-surface-muted border'}`}>🎯 База</button>
-            <button type="button" onClick={() => setValue('kind', 'expansion')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'expansion' ? 'bg-amber-500 text-white' : 'bg-white dark:bg-surface-card-dark text-surface-muted border'}`}>📦 Доп</button>
-            <button type="button" onClick={() => setValue('kind', 'standalone')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'standalone' ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-surface-card-dark text-surface-muted border'}`}>🎲 Соло</button>
+          <label className={labelClass}>Тип игры</label>
+          <div className="grid grid-cols-3 gap-2 mt-1">
+            <button type="button" onClick={() => setValue('kind', 'base')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'base' ? 'bg-blue-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>
+              <span className="block text-base mb-0.5">🎯</span>Базовая игра
+            </button>
+            <button type="button" onClick={() => setValue('kind', 'expansion')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'expansion' ? 'bg-amber-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>
+              <span className="block text-base mb-0.5">📦</span>Дополнение
+            </button>
+            <button type="button" onClick={() => setValue('kind', 'standalone')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'standalone' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>
+              <span className="block text-base mb-0.5">🎲</span>Самостоятельная
+            </button>
           </div>
+          <p className="text-[10px] text-surface-muted mt-2">
+            {kind === 'base' && '🎯 Базовая игра — основа, к которой покупаются дополнения'}
+            {kind === 'expansion' && '📦 Дополнение — требует базовую игру (правила, карты и т.д.)'}
+            {kind === 'standalone' && '🎲 Самостоятельная — играется отдельно, не требует базу'}
+          </p>
         </div>
       )}
 
+      {/* Статус — только не для collection */}
       {showStatus && kind !== 'collection' && (
         <div className="bg-surface-hover dark:bg-surface-hover-dark rounded-2xl p-4">
           <label className={labelClass}>Статус</label>
           <div className="flex gap-2 mt-1">
-            <button type="button" onClick={() => setValue('status', 'owned')} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${status === 'owned' ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-surface-card-dark text-surface-muted border'}`}>✅ Есть</button>
-            <button type="button" onClick={() => setValue('status', 'wishlist')} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${status === 'wishlist' ? 'bg-amber-500 text-white' : 'bg-white dark:bg-surface-card-dark text-surface-muted border'}`}>🎯 Хочу</button>
+            <button type="button" onClick={() => setValue('status', 'owned')} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${status === 'owned' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>✅ Есть</button>
+            <button type="button" onClick={() => setValue('status', 'wishlist')} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${status === 'wishlist' ? 'bg-amber-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>🎯 Хочу</button>
           </div>
         </div>
       )}
 
+      {/* Детали — только не для collection */}
       {showDetails && kind !== 'collection' && (
         <>
           <div className="grid grid-cols-4 gap-3">
-            <Field label="Игроков"><input type="number" {...register('playerCountMin', { valueAsNumber: true })} className={inputClass} /></Field>
+            <Field label="Игроки"><input type="number" {...register('playerCountMin', { valueAsNumber: true })} className={inputClass} /></Field>
             <Field label="Макс"><input type="number" {...register('playerCountMax', { valueAsNumber: true })} className={inputClass} /></Field>
             <Field label="Время"><input type="number" {...register('playTimeMin', { valueAsNumber: true })} className={inputClass} /></Field>
             <Field label="Сложность"><select {...register('complexity', { valueAsNumber: true })} className={inputClass}><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></Field>
