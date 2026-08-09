@@ -2,50 +2,49 @@ import { useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import GameForm from './GameForm';
-import { useGameForm, formDataToCreateData } from '../../hooks/useGameForm';
+import { useGameForm, toGame } from '../../hooks/useGameForm';
 import { useGameStore } from '../../store/gameStore';
 import { useUIStore } from '../../store/uiStore';
 
 function AddGameModal() {
   const { isGameModalOpen, closeGameModal, editingGameId, collectionId } = useUIStore();
   const { games, addGame, updateGame } = useGameStore();
-  const editingGame = editingGameId ? games.find(g => g.id === editingGameId) : undefined;
-  const isEditing = !!editingGame;
+  const editing = editingGameId ? games.find(g => g.id === editingGameId) : undefined;
+  const isEditing = !!editing;
   const isInCollection = !!collectionId;
 
-  const defaultValues = editingGame ? {
-    title: editingGame.title, titleOriginal: editingGame.titleOriginal, kind: editingGame.kind,
-    year: editingGame.year, publisher: editingGame.publisher,
-    designers: editingGame.designers.join(', '), artists: editingGame.artists.join(', '),
-    playerCountMin: editingGame.playerCountMin, playerCountMax: editingGame.playerCountMax,
-    playTimeMin: editingGame.playTimeMin, playTimeMax: editingGame.playTimeMax,
-    complexity: editingGame.complexity, genres: editingGame.genres.join(', '), mechanics: editingGame.mechanics.join(', '),
-    status: editingGame.status, purchaseDate: editingGame.purchaseDate?.toISOString().split('T')[0] || '',
-    purchasePrice: editingGame.purchasePrice, language: editingGame.language,
-    hasProtectors: editingGame.hasProtectors, notes: editingGame.notes,
-    isFavorite: editingGame.isFavorite, tags: editingGame.tags.join(', '),
-    photos: editingGame.photos, collectionId: editingGame.collectionId,
+  const def = editing ? {
+    title: editing.title, titleOriginal: editing.titleOriginal, kind: editing.kind,
+    year: editing.year, publisher: editing.publisher,
+    designers: editing.designers.join(', '), artists: editing.artists.join(', '),
+    playerCountMin: editing.playerCountMin, playerCountMax: editing.playerCountMax,
+    playTimeMin: editing.playTimeMin, playTimeMax: editing.playTimeMax,
+    complexity: editing.complexity, genres: editing.genres.join(', '), mechanics: editing.mechanics.join(', '),
+    status: editing.status, purchaseDate: editing.purchaseDate?.toISOString().split('T')[0] || '',
+    purchasePrice: editing.purchasePrice, language: editing.language,
+    hasProtectors: editing.hasProtectors, notes: editing.notes,
+    isFavorite: editing.isFavorite, tags: editing.tags.join(', '),
+    photos: editing.photos, collectionId: editing.collectionId,
   } : undefined;
 
-  const form = useGameForm(defaultValues);
+  const form = useGameForm(def);
+  useEffect(() => { if (isGameModalOpen) form.reset(def); }, [isGameModalOpen]);
 
-  useEffect(() => { if (isGameModalOpen) form.reset(defaultValues); }, [isGameModalOpen, editingGameId]);
-
-  const onSubmit = async (data: any) => {
-    const gameData = formDataToCreateData(data);
-    if (!isEditing && collectionId) gameData.collectionId = collectionId;
-    if (isEditing && editingGame) await updateGame(editingGame.id, gameData);
-    else await addGame(gameData);
+  const onSubmit = async (d: any) => {
+    const data = toGame(d);
+    if (!isEditing && collectionId) data.collectionId = collectionId;
+    if (isEditing && editing) await updateGame(editing.id, data);
+    else await addGame(data);
     closeGameModal(); form.reset();
   };
 
-  const showKind = !isEditing || editingGame?.kind === 'base';
-  const showStatus = !isEditing || editingGame?.kind !== 'base';
+  const showKind = isInCollection ? true : (!isEditing || editing?.kind === 'collection');
+  const showStatus = !isEditing || editing?.kind !== 'collection';
 
   return (
-    <Modal isOpen={isGameModalOpen} onClose={closeGameModal} title={isEditing ? 'Редактировать' : isInCollection ? 'Добавить в хранилище' : 'Добавить игру'} size="xl">
+    <Modal isOpen={isGameModalOpen} onClose={closeGameModal} title={isEditing ? 'Редактировать' : isInCollection ? 'Добавить в хранилище' : 'Создать'} size="xl">
       <form onSubmit={form.handleSubmit(onSubmit)}>
-        <GameForm form={form} showKind={!isInCollection && showKind} showStatus={showStatus} showDetails={showStatus}>
+        <GameForm form={form} showKind={showKind} showStatus={showStatus} showDetails={showStatus}>
           <div className="flex justify-end gap-2 pt-4 border-t border-surface-border dark:border-surface-border-dark mt-6">
             <Button type="button" variant="ghost" onClick={closeGameModal}>Отмена</Button>
             <Button type="submit" variant="primary">{isEditing ? 'Сохранить' : 'Добавить'}</Button>

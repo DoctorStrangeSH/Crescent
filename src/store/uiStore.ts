@@ -16,14 +16,10 @@ interface UIState {
   closeGameModal: () => void;
 }
 
-const savedTheme = (typeof window !== 'undefined' && localStorage.getItem('crescent-theme')) as Theme | null;
+const saved = (typeof window !== 'undefined' && localStorage.getItem('crescent-theme')) as Theme | null;
 
 export const useUIStore = create<UIState>((set) => ({
-  theme: savedTheme || 'dark',
-  isSidebarOpen: true,
-  isGameModalOpen: false,
-  editingGameId: null,
-  collectionId: null,
+  theme: saved || 'dark', isSidebarOpen: true, isGameModalOpen: false, editingGameId: null, collectionId: null,
 
   toggleTheme: () => set(s => {
     const t = s.theme === 'light' ? 'dark' : 'light';
@@ -31,7 +27,6 @@ export const useUIStore = create<UIState>((set) => ({
     localStorage.setItem('crescent-theme', t);
     return { theme: t };
   }),
-
   setTheme: (t) => { document.documentElement.classList.toggle('dark', t === 'dark'); localStorage.setItem('crescent-theme', t); set({ theme: t }); },
   toggleSidebar: () => set(s => ({ isSidebarOpen: !s.isSidebarOpen })),
   openAddGameModal: (collectionId = null) => set({ isGameModalOpen: true, editingGameId: null, collectionId }),

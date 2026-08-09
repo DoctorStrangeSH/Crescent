@@ -1,9 +1,7 @@
 export type GameStatus = 'owned' | 'wishlist';
 export type GameLanguage = 'russian' | 'english' | 'languageIndependent' | 'other';
 export type Complexity = 1 | 2 | 3 | 4 | 5;
-
-/** Тип игры внутри хранилища */
-export type GameKind = 'base' | 'expansion' | 'standalone';
+export type GameKind = 'collection' | 'base' | 'expansion' | 'standalone';
 
 export interface Game {
   id: string;
