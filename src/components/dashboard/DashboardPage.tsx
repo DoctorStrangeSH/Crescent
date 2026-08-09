@@ -17,13 +17,13 @@ function DashboardPage() {
   useEffect(() => { loadAll(); }, []);
 
   const statusData = [
-    { name: 'Есть', value: stats.ownedGames, color: '#22c55e' },
-    { name: 'Хочу', value: stats.wishlistGames, color: '#e8a850' },
+    { name: 'Есть', value: stats.owned, color: '#22c55e' },
+    { name: 'Хочу', value: stats.wishlist, color: '#e8a850' },
   ].filter(d => d.value > 0);
 
-  const totalProgress = stats.totalGames > 0 ? Math.round((stats.ownedGames / stats.totalGames) * 100) : 0;
+  const totalProgress = stats.total > 0 ? Math.round((stats.owned / stats.total) * 100) : 0;
 
-  if (stats.totalGames === 0) {
+  if (stats.total === 0) {
     return (
       <div className="flex items-center justify-center min-h-[80vh]">
         <EmptyState icon={<Library className="w-12 h-12 text-surface-muted" />} title="Добро пожаловать в Crescent" description="Добавьте свою первую игру" actionLabel="Перейти в коллекцию" onAction={() => navigate('/collection')} />
@@ -41,12 +41,12 @@ function DashboardPage() {
       <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-surface-border dark:border-surface-border-dark shadow-card dark:shadow-card-dark p-5">
         <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><TrendingUp className="w-4 h-4 text-crescent-accent" />Общий прогресс</h3><span className="text-lg font-bold text-crescent-accent">{totalProgress}%</span></div>
         <div className="h-3 bg-surface-hover dark:bg-surface-hover-dark rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-crescent-accent to-crescent-gold rounded-full transition-all duration-1000" style={{ width: `${totalProgress}%` }} /></div>
-        <p className="text-xs text-surface-muted mt-2">{stats.ownedGames} из {stats.totalGames} игр</p>
+        <p className="text-xs text-surface-muted mt-2">{stats.owned} из {stats.total} игр</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Всего игр" value={stats.totalGames} subtitle={`${stats.collections} хранилищ`} icon={<Package className="w-4 h-4" />} />
-        <StatCard label="В коллекции" value={stats.ownedGames} subtitle={`Хочу: ${stats.wishlistGames}`} icon={<Heart className="w-4 h-4" />} color="green" />
+        <StatCard label="Всего игр" value={stats.total} subtitle={`${stats.collections} хранилищ`} icon={<Package className="w-4 h-4" />} />
+        <StatCard label="В коллекции" value={stats.owned} subtitle={`Хочу: ${stats.wishlist}`} icon={<Heart className="w-4 h-4" />} color="green" />
         <StatCard label="Стоимость" value={`${stats.totalValue.toLocaleString('ru-RU')} ₽`} icon={<DollarSign className="w-4 h-4" />} color="gold" />
         <StatCard label="Без протекторов" value={stats.withoutProtectors} icon={<Shield className="w-4 h-4" />} color="purple" />
       </div>
@@ -55,7 +55,7 @@ function DashboardPage() {
         <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-surface-border dark:border-surface-border-dark shadow-card dark:shadow-card-dark p-5">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Статус игр</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <PieChart><Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value">{statusData.map((e, i) => <Cell key={i} fill={e.color} strokeWidth={0} />)}</Pie><Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: '13px' }} /></PieChart>
+            <PieChart><Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value">{statusData.map((entry, i) => <Cell key={i} fill={entry.color} strokeWidth={0} />)}</Pie><Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: '13px' }} /></PieChart>
           </ResponsiveContainer>
           <div className="flex justify-center gap-6 mt-2">{statusData.map(d => <div key={d.name} className="flex items-center gap-2 text-sm"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} /><span className="text-surface-muted">{d.name}</span><span className="font-semibold text-gray-900 dark:text-white">{d.value}</span></div>)}</div>
         </div>
