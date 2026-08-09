@@ -27,14 +27,20 @@ function GameDetailPage() {
   const [stats, setStats] = useState<GameStats | null>(null);
   const [showAddCycle, setShowAddCycle] = useState(false);
   const [newCycleTitle, setNewCycleTitle] = useState('');
-  const [collapsedCycles, setCollapsedCycles] = useState<Set<string>>(new Set());
+  const [collapsedCycles, setCollapsedCycles] = useState<Set<string>>(() => {
+    try { const saved = localStorage.getItem(`crescent-collapsed-${gameId}`); return saved ? new Set(JSON.parse(saved)) : new Set(); }
+    catch { return new Set(); }
+  });
+  const [collapsedBase, setCollapsedBase] = useState(() => {
+    try { return localStorage.getItem(`crescent-collapsed-base-${gameId}`) === 'true'; }
+    catch { return false; }
+  });
   const [dragOverZone, setDragOverZone] = useState<string | null>(null);
   const [dragOverGameId, setDragOverGameId] = useState<string | null>(null);
   const [editingCycleId, setEditingCycleId] = useState<string | null>(null);
   const [editCycleTitle, setEditCycleTitle] = useState('');
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
   const [showBulkAdd, setShowBulkAdd] = useState(false);
-  const [collapsedBase, setCollapsedBase] = useState(false);
 
   useEffect(() => {
     if (gameId) {
@@ -44,13 +50,22 @@ function GameDetailPage() {
     }
   }, [gameId, games.length]);
 
+  // Сохраняем свёрнутость
+  useEffect(() => {
+    if (gameId) {
+      localStorage.setItem(`crescent-collapsed-${gameId}`, JSON.stringify([...collapsedCycles]));
+      localStorage.setItem(`crescent-collapsed-base-${gameId}`, String(collapsedBase));
+    }
+  }, [collapsedCycles, collapsedBase, gameId]);
+
   if (!gameId || !game) return null;
 
   const expansions = games.filter(g => g.parentId === gameId);
   const gameCycles = cycles.filter(c => c.parentGameId === gameId).sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const baseGame = expansions.find(e => !e.cycleId && e.sortOrder === 0);
-  const baseExpansions = expansions.filter(e => !e.cycleId && e.sortOrder > 0).sort((a, b) => a.sortOrder - b.sortOrder);
+  // База = игры без цикла с sortOrder >= 0
+  const baseGames = expansions.filter(e => !e.cycleId && e.sortOrder >= 0).sort((a, b) => a.sortOrder - b.sortOrder);
+  // Одиночные = игры без цикла с sortOrder < 0
   const uncycledExpansions = expansions.filter(e => !e.cycleId && e.sortOrder < 0).sort((a, b) => a.sortOrder - b.sortOrder);
   const hasExpansions = expansions.length > 0;
 
@@ -84,40 +99,55 @@ function GameDetailPage() {
     }
   };
 
-  // Drag-and-drop игры
+  // Получить максимальный sortOrder в зоне
+  const getMaxSortOrder = (zone: string, cycleId?: string | null) => {
+    let filtered: Game[];
+    if (zone === 'base') filtered = baseGames;
+    else if (zone === 'cycle' && cycleId) filtered = expansions.filter(e => e.cycleId === cycleId);
+    else filtered = uncycledExpansions;
+    return filtered.reduce((max, g) => Math.max(max, g.sortOrder || 0), 0);
+  };
+
+  // Drag-and-drop игры между зонами
   const handleGameDragStart = (e: React.DragEvent, gameId: string) => {
     e.dataTransfer.setData('text/plain', gameId);
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleGameDrop = async (e: React.DragEvent, zone: string, cycleId?: string) => {
+  const handleGameDropOnZone = async (e: React.DragEvent, zone: string, cycleId?: string) => {
     e.preventDefault();
     setDragOverZone(null);
     const draggedId = e.dataTransfer.getData('text/plain');
     if (!draggedId) return;
 
+    const maxOrder = getMaxSortOrder(zone, cycleId);
+    const newSortOrder = maxOrder + 1;
+
     if (zone === 'base') {
-      await updateGame(draggedId, { cycleId: null, sortOrder: 0 });
+      await updateGame(draggedId, { cycleId: null, sortOrder: newSortOrder });
     } else if (zone === 'uncycled') {
-      const maxOrder = uncycledExpansions.reduce((max, g) => Math.max(max, g.sortOrder || 0), -1);
-      await updateGame(draggedId, { cycleId: null, sortOrder: maxOrder + 1 });
+      const minOrder = uncycledExpansions.length > 0
+        ? uncycledExpansions.reduce((min, g) => Math.min(min, g.sortOrder || 0), 0) - 1
+        : -1;
+      await updateGame(draggedId, { cycleId: null, sortOrder: minOrder });
     } else if (zone === 'cycle' && cycleId) {
-      const cycleGames = expansions.filter(e => e.cycleId === cycleId);
-      const maxOrder = cycleGames.reduce((max, g) => Math.max(max, g.sortOrder || 0), -1);
-      await updateGame(draggedId, { cycleId, sortOrder: maxOrder + 1 });
+      await updateGame(draggedId, { cycleId, sortOrder: newSortOrder });
     }
   };
 
   // Drag-and-drop сортировка внутри зоны
   const handleSortDrop = async (e: React.DragEvent, targetGame: Game) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverGameId(null);
     const draggedId = e.dataTransfer.getData('text/plain');
     if (!draggedId || draggedId === targetGame.id) return;
     const dragged = games.find(g => g.id === draggedId);
     if (dragged) {
+      // Меняем sortOrder местами
+      const tempOrder = dragged.sortOrder;
       await updateGame(draggedId, { sortOrder: targetGame.sortOrder });
-      await updateGame(targetGame.id, { sortOrder: dragged.sortOrder });
+      await updateGame(targetGame.id, { sortOrder: tempOrder });
     }
   };
 
@@ -134,18 +164,20 @@ function GameDetailPage() {
     const dragged = cycles.find(c => c.id === draggedCycleId);
     const target = cycles.find(c => c.id === targetCycleId);
     if (dragged && target) {
+      const temp = dragged.sortOrder;
       await updateCycle(draggedCycleId, { sortOrder: target.sortOrder });
-      await updateCycle(targetCycleId, { sortOrder: dragged.sortOrder });
+      await updateCycle(targetCycleId, { sortOrder: temp });
     }
   };
 
-  const handleGameDragOver = (e: React.DragEvent, zone: string) => {
+  const handleGameDragOverZone = (e: React.DragEvent, zone: string) => {
     e.preventDefault();
     setDragOverZone(zone);
   };
 
   const handleSortDragOver = (e: React.DragEvent, gameId: string) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverGameId(gameId);
   };
 
@@ -154,7 +186,7 @@ function GameDetailPage() {
     setDragOverGameId(null);
   };
 
-  const toggleCollapse = (id: string) => {
+  const toggleCollapseCycle = (id: string) => {
     setCollapsedCycles(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
@@ -230,17 +262,18 @@ function GameDetailPage() {
         title="Базовая игра" icon="🎯" zone="base"
         dragOverZone={dragOverZone} collapsed={collapsedBase}
         onToggle={() => setCollapsedBase(!collapsedBase)}
-        onDrop={(e) => handleGameDrop(e, 'base')}
-        onDragOver={(e) => handleGameDragOver(e, 'base')}
+        onDrop={(e) => handleGameDropOnZone(e, 'base')}
+        onDragOver={(e) => handleGameDragOverZone(e, 'base')}
         onDragLeave={handleDragLeave}
-        count={baseGame ? 1 + baseExpansions.length : 0}
-        owned={baseGame ? (baseGame.status === 'owned' ? 1 : 0) + baseExpansions.filter(e => e.status === 'owned').length : 0}
+        count={baseGames.length}
+        owned={baseGames.filter(e => e.status === 'owned').length}
       >
-        {baseGame && (
-          <SortableExpansionRow game={baseGame} dragOverGameId={dragOverGameId} onToggle={() => handleToggle(baseGame)} onEdit={() => openEditGameModal(baseGame.id)} onDelete={() => { if (window.confirm('Удалить?')) deleteGame(baseGame.id); }} onDragStart={handleGameDragStart} onDragOver={handleSortDragOver} onDrop={handleSortDrop} onDragLeave={handleDragLeave} />
-        )}
-        {baseExpansions.map(e => (
-          <SortableExpansionRow key={e.id} game={e} dragOverGameId={dragOverGameId} onToggle={() => handleToggle(e)} onEdit={() => openEditGameModal(e.id)} onDelete={() => { if (window.confirm('Удалить?')) deleteGame(e.id); }} onDragStart={handleGameDragStart} onDragOver={handleSortDragOver} onDrop={handleSortDrop} onDragLeave={handleDragLeave} />
+        {baseGames.map(e => (
+          <SortableExpansionRow key={e.id} game={e} dragOverGameId={dragOverGameId}
+            onToggle={() => handleToggle(e)} onEdit={() => openEditGameModal(e.id)}
+            onDelete={() => { if (window.confirm('Удалить?')) deleteGame(e.id); }}
+            onDragStart={handleGameDragStart} onDragOver={handleSortDragOver}
+            onDrop={handleSortDrop} onDragLeave={handleDragLeave} />
         ))}
       </DropZone>
 
@@ -253,7 +286,7 @@ function GameDetailPage() {
         return (
           <div key={cycle.id} draggable onDragStart={(e) => handleCycleDragStart(e, cycle.id)} onDrop={(e) => handleCycleDrop(e, cycle.id)} onDragOver={(e) => e.preventDefault()}>
             <div className="flex items-center gap-2 mb-1 px-1 group cursor-grab active:cursor-grabbing">
-              <button onClick={() => toggleCollapse(cycle.id)}>{isCollapsed ? <ChevronRight className="w-4 h-4 text-surface-muted" /> : <ChevronDown className="w-4 h-4 text-surface-muted" />}</button>
+              <button onClick={() => toggleCollapseCycle(cycle.id)}>{isCollapsed ? <ChevronRight className="w-4 h-4 text-surface-muted" /> : <ChevronDown className="w-4 h-4 text-surface-muted" />}</button>
               <GripVertical className="w-3 h-3 text-surface-muted" />
               <Layers className="w-4 h-4 text-crescent-accent/70" />
               {editingCycleId === cycle.id ? (
@@ -268,12 +301,16 @@ function GameDetailPage() {
             {!isCollapsed && (
               <div
                 className={`border-2 border-dashed rounded-2xl p-2 min-h-[50px] ml-4 transition-all ${isDragOver ? 'border-crescent-accent bg-crescent-accent/5' : 'border-surface-border dark:border-surface-border-dark'}`}
-                onDrop={(e) => handleGameDrop(e, 'cycle', cycle.id)}
-                onDragOver={(e) => handleGameDragOver(e, `cycle-${cycle.id}`)}
+                onDrop={(e) => handleGameDropOnZone(e, 'cycle', cycle.id)}
+                onDragOver={(e) => handleGameDragOverZone(e, `cycle-${cycle.id}`)}
                 onDragLeave={handleDragLeave}
               >
                 {cg.length === 0 ? <p className="text-xs text-surface-muted text-center py-3">Перетащите сюда</p> : cg.map(e => (
-                  <SortableExpansionRow key={e.id} game={e} dragOverGameId={dragOverGameId} onToggle={() => handleToggle(e)} onEdit={() => openEditGameModal(e.id)} onDelete={() => { if (window.confirm('Удалить?')) deleteGame(e.id); }} onDragStart={handleGameDragStart} onDragOver={handleSortDragOver} onDrop={handleSortDrop} onDragLeave={handleDragLeave} />
+                  <SortableExpansionRow key={e.id} game={e} dragOverGameId={dragOverGameId}
+                    onToggle={() => handleToggle(e)} onEdit={() => openEditGameModal(e.id)}
+                    onDelete={() => { if (window.confirm('Удалить?')) deleteGame(e.id); }}
+                    onDragStart={handleGameDragStart} onDragOver={handleSortDragOver}
+                    onDrop={handleSortDrop} onDragLeave={handleDragLeave} />
                 ))}
               </div>
             )}
@@ -286,15 +323,19 @@ function GameDetailPage() {
         title="Одиночные дополнения" icon="📋" zone="uncycled"
         dragOverZone={dragOverZone} collapsed={false}
         onToggle={() => {}}
-        onDrop={(e) => handleGameDrop(e, 'uncycled')}
-        onDragOver={(e) => handleGameDragOver(e, 'uncycled')}
+        onDrop={(e) => handleGameDropOnZone(e, 'uncycled')}
+        onDragOver={(e) => handleGameDragOverZone(e, 'uncycled')}
         onDragLeave={handleDragLeave}
         count={uncycledExpansions.length}
         owned={uncycledExpansions.filter(e => e.status === 'owned').length}
         collapsible={false}
       >
         {uncycledExpansions.map(e => (
-          <SortableExpansionRow key={e.id} game={e} dragOverGameId={dragOverGameId} onToggle={() => handleToggle(e)} onEdit={() => openEditGameModal(e.id)} onDelete={() => { if (window.confirm('Удалить?')) deleteGame(e.id); }} onDragStart={handleGameDragStart} onDragOver={handleSortDragOver} onDrop={handleSortDrop} onDragLeave={handleDragLeave} />
+          <SortableExpansionRow key={e.id} game={e} dragOverGameId={dragOverGameId}
+            onToggle={() => handleToggle(e)} onEdit={() => openEditGameModal(e.id)}
+            onDelete={() => { if (window.confirm('Удалить?')) deleteGame(e.id); }}
+            onDragStart={handleGameDragStart} onDragOver={handleSortDragOver}
+            onDrop={handleSortDrop} onDragLeave={handleDragLeave} />
         ))}
       </DropZone>
 
