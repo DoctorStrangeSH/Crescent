@@ -16,7 +16,6 @@ export function useStats(): DashboardStats {
   const games = useGameStore(s => s.games);
   return useMemo(() => {
     const collections = new Set(games.filter(g => g.collectionId).map(g => g.collectionId)).size;
-    const root = games.filter(g => !g.collectionId);
     const expansions = games.filter(g => g.collectionId);
     const owned = games.filter(g => g.status === 'owned');
     const wishlist = games.filter(g => g.status === 'wishlist');

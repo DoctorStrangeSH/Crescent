@@ -6,7 +6,7 @@ import { gameService } from '../../core/services/gameService';
 import type { Game, GameStats } from '../../core/types/game';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
-import { ArrowLeft, Plus, Check, ShoppingCart, Star, Shield, Edit3, Trash2, FolderPlus, Layers, Package, Image, ChevronDown, ChevronRight, GripVertical, X } from 'lucide-react';
+import { ArrowLeft, Plus, Check, ShoppingCart, Star, Shield, Edit3, Trash2, FolderPlus, Layers, Package, Image, ChevronDown, ChevronRight, X } from 'lucide-react';
 
 function GameDetailPage() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -41,7 +41,6 @@ function GameDetailPage() {
 
   const items = games.filter(g => g.collectionId === gameId);
   const gameCycles = cycles.filter(c => c.collectionId === gameId).sort((a, b) => a.sortOrder - b.sortOrder);
-  const baseGame = items.find(e => e.kind === 'base' && !e.cycleId);
   const baseItems = items.filter(e => e.kind === 'base' && !e.cycleId);
   const expansions = items.filter(e => e.kind === 'expansion' && !e.cycleId).sort((a, b) => a.sortOrder - b.sortOrder);
   const standaloneItems = items.filter(e => e.kind === 'standalone' && !e.cycleId).sort((a, b) => a.sortOrder - b.sortOrder);
