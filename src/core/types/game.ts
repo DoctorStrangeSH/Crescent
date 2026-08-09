@@ -8,6 +8,7 @@ export interface Game {
   titleOriginal: string;
   parentId: string | null;
   cycleId: string | null;
+  isSeries: boolean;
   year: number | null;
   publisher: string;
   designers: string[];

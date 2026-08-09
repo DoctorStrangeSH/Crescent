@@ -4,18 +4,18 @@
 
 @layer base {
   body {
-    @apply font-body text-gray-900 dark:text-gray-100 antialiased;
-    background-color: #faf9f6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    @apply font-sans antialiased;
+    background-color: #faf8f5;
+    color: #1a1a2e;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   .dark body {
-    background-color: #0d0d14;
+    background-color: #0c0c14;
+    color: #e8e5e0;
   }
 }
 
-/* Тонкий скроллбар в стиле Linear */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -26,24 +26,13 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 dark:bg-gray-800 rounded-full;
+  @apply bg-surface-muted/30 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400 dark:bg-gray-700;
+  @apply bg-surface-muted/50;
 }
 
-/* Выделение текста */
 ::selection {
-  @apply bg-crescent-accent/20 text-current;
-}
-
-/* Убираем outline у всех интерактивных элементов, заменяем на ring */
-*:focus-visible {
-  @apply outline-none ring-2 ring-crescent-accent/50 ring-offset-2 ring-offset-white dark:ring-offset-crescent-dark rounded-lg;
-}
-
-/* Плавные переходы для всех интерактивных элементов */
-a, button, input, select, textarea {
-  @apply transition-all duration-150;
+  background-color: rgba(124, 92, 231, 0.2);
 }

@@ -23,12 +23,12 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
           <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} transition={{ duration: 0.2 }}
-            className={`relative w-full ${sizeClasses[size]} bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 max-h-[90vh] overflow-hidden flex flex-col`}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
-              <h2 className="text-lg font-semibold text-white truncate pr-4">{title}</h2>
-              <button onClick={onClose} className="p-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+            className={`relative w-full ${sizeClasses[size]} bg-white dark:bg-surface-card-dark rounded-3xl shadow-2xl border border-surface-border dark:border-surface-border-dark max-h-[90vh] overflow-hidden flex flex-col`}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border dark:border-surface-border-dark flex-shrink-0">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate pr-4">{title}</h2>
+              <button onClick={onClose} className="p-1.5 rounded-xl text-surface-muted hover:text-gray-700 dark:hover:text-white hover:bg-surface-hover dark:hover:bg-surface-hover-dark transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
           </motion.div>

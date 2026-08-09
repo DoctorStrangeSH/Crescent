@@ -12,10 +12,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-gradient-to-r from-crescent-accent to-crescent-gold text-white shadow-lg shadow-crescent-accent/25 hover:shadow-xl hover:shadow-crescent-accent/40 hover:scale-[1.02]',
-  secondary: 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white backdrop-blur-sm border border-white/10',
-  ghost: 'text-white/60 hover:text-white hover:bg-white/10',
-  danger: 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30',
+  primary: 'bg-crescent-accent text-white hover:bg-crescent-accent/90 shadow-sm',
+  secondary: 'bg-surface-hover dark:bg-surface-hover-dark text-gray-700 dark:text-white hover:bg-surface-border dark:hover:bg-surface-border-dark',
+  ghost: 'text-surface-muted dark:text-surface-muted-dark hover:text-gray-700 dark:hover:text-white hover:bg-surface-hover dark:hover:bg-surface-hover-dark',
+  danger: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

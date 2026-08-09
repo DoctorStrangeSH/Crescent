@@ -14,7 +14,7 @@ interface GameState {
 
   loadAll: () => Promise<void>;
   addGame: (data: CreateGameData) => Promise<Game>;
-  updateGame: (id: string, data: UpdateGameData) => Promise<Game | undefined>;
+  updateGame: (id: string, data: UpdateGameData) => Promise<void>;
   deleteGame: (id: string) => Promise<boolean>;
   addCycle: (data: CreateCycleData) => Promise<Cycle>;
   updateCycle: (id: string, data: Partial<Cycle>) => Promise<void>;
@@ -38,13 +38,50 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ games, cycles, isLoading: false });
   },
 
-  addGame: async (data) => { const g = await gameService.add(data); await get().loadAll(); return g; },
-  updateGame: async (id, data) => { const u = await gameService.update(id, data); if (u) set(s => ({ games: s.games.map(g => g.id === id ? u : g) })); return u; },
-  deleteGame: async (id) => { const ok = await gameService.delete(id); if (ok) set(s => ({ games: s.games.filter(g => g.id !== id && g.parentId !== id) })); return ok; },
+  addGame: async (data) => {
+    const game = await gameService.add(data);
+    set(s => ({ games: [...s.games, game] }));
+    return game;
+  },
 
-  addCycle: async (data) => { const c = await cycleService.add(data); await get().loadAll(); return c; },
-  updateCycle: async (id, data) => { await cycleService.update(id, data); await get().loadAll(); },
-  deleteCycle: async (id) => { await cycleService.delete(id); await get().loadAll(); },
+  updateGame: async (id, data) => {
+    const updated = await gameService.update(id, data);
+    if (updated) {
+      set(s => ({ games: s.games.map(g => g.id === id ? updated : g) }));
+    }
+  },
+
+  deleteGame: async (id) => {
+    // Удаляем саму игру и все её дополнения
+    const expansions = get().games.filter(g => g.parentId === id);
+    const ok = await gameService.delete(id);
+    if (ok) {
+      set(s => ({
+        games: s.games.filter(g => g.id !== id && !expansions.map(e => e.id).includes(g.id)),
+        cycles: s.cycles.filter(c => c.parentGameId !== id),
+      }));
+    }
+    return ok;
+  },
+
+  addCycle: async (data) => {
+    const cycle = await cycleService.add(data);
+    set(s => ({ cycles: [...s.cycles, cycle] }));
+    return cycle;
+  },
+
+  updateCycle: async (id, data) => {
+    await cycleService.update(id, data);
+    set(s => ({ cycles: s.cycles.map(c => c.id === id ? { ...c, ...data } : c) }));
+  },
+
+  deleteCycle: async (id) => {
+    await cycleService.delete(id);
+    set(s => ({
+      cycles: s.cycles.filter(c => c.id !== id),
+      games: s.games.map(g => g.cycleId === id ? { ...g, cycleId: null } : g),
+    }));
+  },
 
   setFilters: (f) => set(s => ({ filters: { ...s.filters, ...f } })),
   resetFilters: () => set({ filters: { ...DEFAULT_FILTERS } }),

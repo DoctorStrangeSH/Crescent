@@ -6,6 +6,7 @@ import type { CreateGameData } from '../core/types/game';
 
 const gameFormSchema = z.object({
   parentId: z.string().nullable().optional(),
+  isSeries: z.boolean().optional().default(false),
   title: z.string().min(1, 'Название обязательно'),
   titleOriginal: z.string().optional().default(''),
   year: z.number().int().min(1900).max(2100).nullable().optional(),
@@ -38,6 +39,7 @@ function strToArr(v: string): string[] { return v.split(',').map(s => s.trim()).
 export function formDataToCreateData(data: GameFormData): CreateGameData {
   return {
     parentId: data.parentId ?? null,
+    isSeries: data.isSeries ?? false,
     title: data.title,
     titleOriginal: data.titleOriginal || '',
     year: data.year ?? null,
@@ -79,6 +81,7 @@ export function useGameForm(defaultValues?: Partial<GameFormData>) {
     resolver: zodResolver(gameFormSchema),
     defaultValues: {
       parentId: parentGameId || null,
+      isSeries: false,
       title: '', titleOriginal: '', year: null, publisher: '', designers: '', artists: '',
       playerCountMin: 1, playerCountMax: 4, playTimeMin: 30, playTimeMax: 60,
       complexity: 2, genres: '', mechanics: '', status: 'owned',
