@@ -7,14 +7,14 @@ import { gameService } from '../../core/services/gameService';
 import type { Game, GameStats } from '../../core/types/game';
 import EmptyState from '../ui/EmptyState';
 import Button from '../ui/Button';
-import { Plus, Library, Star, Shield, Trash2, Package } from 'lucide-react';
+import { Plus, Library, Package, Trash2, Star, Shield } from 'lucide-react';
 
 function CollectionPage() {
   const navigate = useNavigate();
   const games = useGameStore(s => s.games);
   const loadAll = useGameStore(s => s.loadAll);
-  const deleteGame = useGameStore(s => s.deleteGame);
   const updateGame = useGameStore(s => s.updateGame);
+  const deleteGame = useGameStore(s => s.deleteGame);
   const openAddGameModal = useUIStore(s => s.openAddGameModal);
   const [statsMap, setStatsMap] = useState<Record<string, GameStats>>({});
 
@@ -23,7 +23,12 @@ function CollectionPage() {
   useEffect(() => {
     const load = async () => {
       const map: Record<string, GameStats> = {};
-      for (const g of games.filter(x => !x.parentId)) {
+      for (const g of games.filter(x => x.kind === 'base' || x.kind === 'standalone')) {
+        if (g.collectionId) continue; // не корневая
+        map[g.id] = await gameService.getStats(g.id);
+      }
+      // Для игр-коллекций
+      for (const g of games.filter(x => !x.collectionId && x.kind === 'base')) {
         map[g.id] = await gameService.getStats(g.id);
       }
       setStatsMap(map);
@@ -31,11 +36,13 @@ function CollectionPage() {
     load();
   }, [games]);
 
-  const rootGames = games.filter(g => !g.parentId);
+  const rootGames = games.filter(g => !g.collectionId && !g.cycleId);
+  const collections = games.filter(g => g.kind === 'base' && g.collectionId === null);
+  const standaloneGames = games.filter(g => g.kind === 'standalone' && g.collectionId === null);
 
   const handleDelete = async (e: React.MouseEvent, game: Game) => {
     e.stopPropagation();
-    if (window.confirm(`Удалить «${game.title}» и все дополнения?`)) await deleteGame(game.id);
+    if (window.confirm(`Удалить «${game.title}» и всё содержимое?`)) await deleteGame(game.id);
   };
 
   const handleToggle = async (e: React.MouseEvent, game: Game) => {
@@ -46,70 +53,70 @@ function CollectionPage() {
   if (rootGames.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[80vh]">
-        <EmptyState icon={<Library className="w-12 h-12 text-surface-muted" />} title="Коллекция пуста" description="Добавьте свою первую игру" actionLabel="Добавить игру" onAction={() => openAddGameModal()} />
+        <EmptyState icon={<Library className="w-12 h-12 text-surface-muted" />} title="Коллекция пуста" description="Добавьте своё первое хранилище или игру" actionLabel="Добавить игру" onAction={() => openAddGameModal()} />
       </div>
     );
   }
+
+  const renderGame = (game: Game) => {
+    const stats = statsMap[game.id];
+    const hasContent = stats && stats.total > 0;
+    return (
+      <motion.div key={game.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        whileHover={{ y: -4, scale: 1.02 }}
+        onClick={() => navigate(`/collection/${game.id}`)}
+        className="group cursor-pointer bg-white dark:bg-surface-card-dark rounded-2xl border border-surface-border dark:border-surface-border-dark shadow-card dark:shadow-card-dark hover:shadow-card-hover dark:hover:shadow-card-hover-dark transition-all duration-300 overflow-hidden">
+        <div className="relative h-48 bg-gradient-to-br from-crescent-accent/10 to-crescent-gold/10 flex items-center justify-center">
+          {game.photos && game.photos.length > 0 ? (
+            <img src={game.photos[0]} alt={game.title} className="w-full h-full object-cover" />
+          ) : (
+            <Package className="w-16 h-16 text-surface-muted/40" />
+          )}
+          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={(e) => handleToggle(e, game)} className="w-9 h-9 rounded-xl bg-white/90 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center text-base hover:scale-110 transition-transform shadow-sm">{game.status === 'owned' ? '✅' : '🎯'}</button>
+            <button onClick={(e) => handleDelete(e, game)} className="w-9 h-9 rounded-xl bg-white/90 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm"><Trash2 className="w-4 h-4" /></button>
+          </div>
+          {hasContent && (
+            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-surface-border dark:bg-surface-border-dark">
+              <div className="h-full bg-gradient-to-r from-crescent-accent to-crescent-gold transition-all duration-700" style={{ width: `${stats.completionPercent}%` }} />
+            </div>
+          )}
+        </div>
+        <div className="p-5">
+          <h3 className="font-bold text-base text-gray-900 dark:text-white line-clamp-2 leading-snug">{game.title}</h3>
+          <div className="flex items-center justify-between mt-3">
+            {hasContent ? (
+              <>
+                <span className="text-sm text-surface-muted">{stats.owned}/{stats.total} предметов</span>
+                <span className="text-sm font-bold text-crescent-accent">{stats.completionPercent}%</span>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                {game.isFavorite && <Star className="w-4 h-4 text-amber-400 fill-amber-400" />}
+                {game.hasProtectors && <Shield className="w-4 h-4 text-purple-400" />}
+                <span className="text-sm text-surface-muted">{game.kind === 'base' ? '📚 Хранилище' : '🎲 Игра'}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Коллекция</h1>
-          <p className="text-sm text-surface-muted mt-0.5">{rootGames.length} {rootGames.length === 1 ? 'игра' : rootGames.length >= 2 && rootGames.length <= 4 ? 'игры' : 'игр'}</p>
+          <p className="text-sm text-surface-muted mt-0.5">{rootGames.length} {rootGames.length === 1 ? 'элемент' : rootGames.length >= 2 && rootGames.length <= 4 ? 'элемента' : 'элементов'}</p>
         </div>
-        <Button icon={<Plus className="w-4 h-4" />} onClick={() => openAddGameModal()}>Добавить игру</Button>
+        <Button icon={<Plus className="w-4 h-4" />} onClick={() => openAddGameModal()}>Добавить</Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         <AnimatePresence mode="popLayout">
-          {rootGames.map(game => {
-            const stats = statsMap[game.id] || { totalExpansions: 0, ownedExpansions: 0, wishlistExpansions: 0, totalValue: 0, completionPercent: 0 };
-            const hasExpansions = stats.totalExpansions > 0;
-            return (
-              <motion.div key={game.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                whileHover={{ y: -4, scale: 1.02 }}
-                onClick={() => navigate(`/game/${game.id}`)}
-                className="group cursor-pointer bg-white dark:bg-surface-card-dark rounded-2xl border border-surface-border dark:border-surface-border-dark hover:shadow-card-hover dark:hover:shadow-card-hover-dark shadow-card dark:shadow-card-dark transition-all duration-300 overflow-hidden">
-                <div className="relative h-44 bg-gradient-to-br from-crescent-accent/10 to-crescent-gold/10 flex items-center justify-center">
-                  {game.photos && game.photos.length > 0 ? (
-                    <img src={game.photos[0]} alt={game.title} className="w-full h-full object-contain p-4" />
-                  ) : (
-                    <Package className="w-12 h-12 text-surface-muted" />
-                  )}
-                  <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => handleToggle(e, game)} className="w-8 h-8 rounded-xl bg-white/80 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center text-sm hover:scale-110 transition-transform shadow-sm">{game.status === 'owned' ? '✅' : '🎯'}</button>
-                    <button onClick={(e) => handleDelete(e, game)} className="w-8 h-8 rounded-xl bg-white/80 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                  {hasExpansions && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-border dark:bg-surface-border-dark">
-                      <div className="h-full bg-gradient-to-r from-crescent-accent to-crescent-gold transition-all duration-700" style={{ width: `${stats.completionPercent}%` }} />
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    {game.isSeries && <span className="text-xs text-crescent-accent font-medium">📚 Серия</span>}
-                  </div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{game.title}</h3>
-                  <div className="flex items-center justify-between mt-2.5">
-                    {hasExpansions ? (
-                      <>
-                        <span className="text-xs text-surface-muted">{stats.ownedExpansions}/{stats.totalExpansions} допов</span>
-                        <span className="text-xs font-semibold text-crescent-accent">{stats.completionPercent}%</span>
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {game.isFavorite && <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />}
-                        {game.hasProtectors && <Shield className="w-3.5 h-3.5 text-purple-400" />}
-                        <span className="text-xs text-surface-muted">{game.isSeries ? 'Нет допов' : 'Одиночная'}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
+          {collections.map(renderGame)}
+          {standaloneGames.map(renderGame)}
         </AnimatePresence>
       </div>
     </div>

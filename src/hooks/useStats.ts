@@ -6,35 +6,23 @@ export interface DashboardStats {
   ownedGames: number;
   wishlistGames: number;
   totalValue: number;
-  averageRating: number | null;
   withoutProtectors: number;
   favorites: number;
-  rootGames: number;
+  collections: number;
   totalExpansions: number;
 }
 
 export function useStats(): DashboardStats {
   const games = useGameStore(s => s.games);
-
   return useMemo(() => {
-    const root = games.filter(g => !g.parentId);
-    const expansions = games.filter(g => g.parentId);
+    const collections = new Set(games.filter(g => g.collectionId).map(g => g.collectionId)).size;
+    const root = games.filter(g => !g.collectionId);
+    const expansions = games.filter(g => g.collectionId);
     const owned = games.filter(g => g.status === 'owned');
     const wishlist = games.filter(g => g.status === 'wishlist');
     const totalValue = owned.reduce((sum, g) => sum + (g.purchasePrice || 0), 0);
     const withoutProtectors = owned.filter(g => !g.hasProtectors).length;
     const favorites = games.filter(g => g.isFavorite).length;
-
-    return {
-      totalGames: games.length,
-      ownedGames: owned.length,
-      wishlistGames: wishlist.length,
-      totalValue,
-      averageRating: null,
-      withoutProtectors,
-      favorites,
-      rootGames: root.length,
-      totalExpansions: expansions.length,
-    };
+    return { totalGames: games.length, ownedGames: owned.length, wishlistGames: wishlist.length, totalValue, withoutProtectors, favorites, collections, totalExpansions: expansions.length };
   }, [games]);
 }

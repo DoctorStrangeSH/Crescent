@@ -6,16 +6,20 @@ function generateId(): string { return crypto.randomUUID(); }
 export const gameService = {
   async getAll(): Promise<Game[]> { return db.games.toArray(); },
   async getById(id: string): Promise<Game | undefined> { return db.games.get(id); },
-  async getRootGames(): Promise<Game[]> { const all = await db.games.toArray(); return all.filter(g => !g.parentId); },
-  async getExpansions(parentId: string): Promise<Game[]> { return db.games.where('parentId').equals(parentId).toArray(); },
-  async getByCycleId(cycleId: string): Promise<Game[]> { return db.games.where('cycleId').equals(cycleId).toArray(); },
+  async getByCollectionId(collectionId: string): Promise<Game[]> {
+    return db.games.where('collectionId').equals(collectionId).toArray();
+  },
+  async getRootGames(): Promise<Game[]> {
+    const all = await db.games.toArray();
+    return all.filter(g => !g.collectionId);
+  },
 
   async add(data: CreateGameData): Promise<Game> {
     const now = new Date();
     const game: Game = {
-      id: generateId(), parentId: data.parentId ?? null, cycleId: data.cycleId ?? null, isSeries: data.isSeries ?? false,
-      title: data.title, titleOriginal: data.titleOriginal ?? '', year: data.year ?? null, publisher: data.publisher ?? '',
-      designers: data.designers ?? [], artists: data.artists ?? [],
+      id: generateId(), collectionId: data.collectionId ?? null, cycleId: data.cycleId ?? null,
+      kind: data.kind ?? 'standalone', title: data.title, titleOriginal: data.titleOriginal ?? '',
+      year: data.year ?? null, publisher: data.publisher ?? '', designers: data.designers ?? [], artists: data.artists ?? [],
       playerCountMin: data.playerCountMin ?? 1, playerCountMax: data.playerCountMax ?? 4,
       bestPlayerCount: data.bestPlayerCount ?? '', playTimeMin: data.playTimeMin ?? 30, playTimeMax: data.playTimeMax ?? 60,
       age: data.age ?? null, complexity: data.complexity ?? 2,
@@ -38,20 +42,16 @@ export const gameService = {
 
   async delete(id: string): Promise<boolean> {
     const existing = await db.games.get(id); if (!existing) return false;
-    const expansions = await db.games.where('parentId').equals(id).toArray();
-    for (const exp of expansions) await db.games.delete(exp.id);
-    const cycles = await db.cycles.where('parentGameId').equals(id).toArray();
-    for (const c of cycles) await db.cycles.delete(c.id);
+    const children = await db.games.where('collectionId').equals(id).toArray();
+    for (const c of children) await db.games.delete(c.id);
     await db.games.delete(id); return true;
   },
 
-  async getStats(gameId: string): Promise<GameStats> {
-    const expansions = await db.games.where('parentId').equals(gameId).toArray();
-    const total = expansions.length, owned = expansions.filter(g => g.status === 'owned').length;
-    const wishlist = expansions.filter(g => g.status === 'wishlist').length;
-    const value = expansions.filter(g => g.status === 'owned').reduce((s, g) => s + (g.purchasePrice || 0), 0);
-    return { totalExpansions: total, ownedExpansions: owned, wishlistExpansions: wishlist, totalValue: value, completionPercent: total > 0 ? Math.round((owned / total) * 100) : 0 };
+  async getStats(collectionId: string): Promise<GameStats> {
+    const items = await db.games.where('collectionId').equals(collectionId).toArray();
+    const total = items.length, owned = items.filter(g => g.status === 'owned').length;
+    const wishlist = items.filter(g => g.status === 'wishlist').length;
+    const value = items.filter(g => g.status === 'owned').reduce((s, g) => s + (g.purchasePrice || 0), 0);
+    return { total, owned, wishlist, totalValue: value, completionPercent: total > 0 ? Math.round((owned / total) * 100) : 0 };
   },
-
-  async count(): Promise<number> { return db.games.count(); },
 };

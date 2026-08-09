@@ -6,35 +6,10 @@ class CrescentDB extends Dexie {
   cycles!: Table<Cycle, string>;
 
   constructor() {
-    super('CrescentDBv3');
-
+    super('CrescentDBv4');
     this.version(1).stores({
-      games: `
-        id,
-        parentId,
-        cycleId,
-        title,
-        status,
-        language,
-        complexity,
-        purchasePrice,
-        hasProtectors,
-        isFavorite,
-        sortOrder,
-        createdAt,
-        updatedAt,
-        *genres,
-        *mechanics,
-        *tags
-      `,
-      cycles: `
-        id,
-        parentGameId,
-        title,
-        sortOrder,
-        createdAt,
-        updatedAt
-      `
+      games: `id, collectionId, cycleId, kind, title, status, language, complexity, purchasePrice, hasProtectors, isFavorite, sortOrder, createdAt, updatedAt, *genres, *mechanics, *tags`,
+      cycles: `id, collectionId, title, sortOrder, createdAt, updatedAt`
     });
   }
 }

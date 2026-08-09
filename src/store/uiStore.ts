@@ -7,12 +7,11 @@ interface UIState {
   isSidebarOpen: boolean;
   isGameModalOpen: boolean;
   editingGameId: string | null;
-  parentGameId: string | null;
-
+  collectionId: string | null;
   toggleTheme: () => void;
   setTheme: (t: Theme) => void;
   toggleSidebar: () => void;
-  openAddGameModal: (parentId?: string | null) => void;
+  openAddGameModal: (collectionId?: string | null) => void;
   openEditGameModal: (id: string) => void;
   closeGameModal: () => void;
 }
@@ -24,7 +23,7 @@ export const useUIStore = create<UIState>((set) => ({
   isSidebarOpen: true,
   isGameModalOpen: false,
   editingGameId: null,
-  parentGameId: null,
+  collectionId: null,
 
   toggleTheme: () => set(s => {
     const t = s.theme === 'light' ? 'dark' : 'light';
@@ -33,15 +32,9 @@ export const useUIStore = create<UIState>((set) => ({
     return { theme: t };
   }),
 
-  setTheme: (t) => {
-    document.documentElement.classList.toggle('dark', t === 'dark');
-    localStorage.setItem('crescent-theme', t);
-    set({ theme: t });
-  },
-
+  setTheme: (t) => { document.documentElement.classList.toggle('dark', t === 'dark'); localStorage.setItem('crescent-theme', t); set({ theme: t }); },
   toggleSidebar: () => set(s => ({ isSidebarOpen: !s.isSidebarOpen })),
-
-  openAddGameModal: (parentId = null) => set({ isGameModalOpen: true, editingGameId: null, parentGameId: parentId }),
-  openEditGameModal: (id) => set({ isGameModalOpen: true, editingGameId: id, parentGameId: null }),
-  closeGameModal: () => set({ isGameModalOpen: false, editingGameId: null, parentGameId: null }),
+  openAddGameModal: (collectionId = null) => set({ isGameModalOpen: true, editingGameId: null, collectionId }),
+  openEditGameModal: (id) => set({ isGameModalOpen: true, editingGameId: id, collectionId: null }),
+  closeGameModal: () => set({ isGameModalOpen: false, editingGameId: null, collectionId: null }),
 }));

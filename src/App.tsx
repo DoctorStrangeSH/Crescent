@@ -12,7 +12,7 @@ function App() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/collection" element={<CollectionPage />} />
-          <Route path="/game/:gameId" element={<GameDetailPage />} />
+          <Route path="/collection/:gameId" element={<GameDetailPage />} />
         </Routes>
       </AppLayout>
       <AddGameModal />

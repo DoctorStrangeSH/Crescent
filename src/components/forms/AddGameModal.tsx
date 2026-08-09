@@ -7,23 +7,24 @@ import { useGameStore } from '../../store/gameStore';
 import { useUIStore } from '../../store/uiStore';
 
 function AddGameModal() {
-  const { isGameModalOpen, closeGameModal, editingGameId, parentGameId } = useUIStore();
+  const { isGameModalOpen, closeGameModal, editingGameId, collectionId } = useUIStore();
   const { games, addGame, updateGame } = useGameStore();
   const editingGame = editingGameId ? games.find(g => g.id === editingGameId) : undefined;
   const isEditing = !!editingGame;
-  const isExpansion = !!parentGameId;
+  const isInCollection = !!collectionId;
 
   const defaultValues = editingGame ? {
-    title: editingGame.title, titleOriginal: editingGame.titleOriginal, year: editingGame.year,
-    publisher: editingGame.publisher, designers: editingGame.designers.join(', '), artists: editingGame.artists.join(', '),
+    title: editingGame.title, titleOriginal: editingGame.titleOriginal, kind: editingGame.kind,
+    year: editingGame.year, publisher: editingGame.publisher,
+    designers: editingGame.designers.join(', '), artists: editingGame.artists.join(', '),
     playerCountMin: editingGame.playerCountMin, playerCountMax: editingGame.playerCountMax,
     playTimeMin: editingGame.playTimeMin, playTimeMax: editingGame.playTimeMax,
     complexity: editingGame.complexity, genres: editingGame.genres.join(', '), mechanics: editingGame.mechanics.join(', '),
     status: editingGame.status, purchaseDate: editingGame.purchaseDate?.toISOString().split('T')[0] || '',
     purchasePrice: editingGame.purchasePrice, language: editingGame.language,
-    hasProtectors: editingGame.hasProtectors, protectorDetails: editingGame.protectorDetails,
-    notes: editingGame.notes, isFavorite: editingGame.isFavorite, tags: editingGame.tags.join(', '),
-    photos: editingGame.photos, parentId: editingGame.parentId, isSeries: editingGame.isSeries,
+    hasProtectors: editingGame.hasProtectors, notes: editingGame.notes,
+    isFavorite: editingGame.isFavorite, tags: editingGame.tags.join(', '),
+    photos: editingGame.photos, collectionId: editingGame.collectionId,
   } : undefined;
 
   const form = useGameForm(defaultValues);
@@ -32,23 +33,19 @@ function AddGameModal() {
 
   const onSubmit = async (data: any) => {
     const gameData = formDataToCreateData(data);
-    if (!isEditing && parentGameId) {
-      gameData.parentId = parentGameId;
-      gameData.isSeries = false;
-      // Автоинкремент sortOrder для новых дополнений
-      const existingExpansions = games.filter(g => g.parentId === parentGameId);
-      const maxOrder = existingExpansions.reduce((max, g) => Math.max(max, g.sortOrder || 0), -1);
-      gameData.sortOrder = maxOrder + 1;
-    }
+    if (!isEditing && collectionId) gameData.collectionId = collectionId;
     if (isEditing && editingGame) await updateGame(editingGame.id, gameData);
     else await addGame(gameData);
     closeGameModal(); form.reset();
   };
 
+  const showKind = !isEditing || editingGame?.kind === 'base';
+  const showStatus = !isEditing || editingGame?.kind !== 'base';
+
   return (
-    <Modal isOpen={isGameModalOpen} onClose={closeGameModal} title={isEditing ? 'Редактировать' : isExpansion ? 'Добавить дополнение' : 'Добавить игру'} size="xl">
+    <Modal isOpen={isGameModalOpen} onClose={closeGameModal} title={isEditing ? 'Редактировать' : isInCollection ? 'Добавить в хранилище' : 'Добавить игру'} size="xl">
       <form onSubmit={form.handleSubmit(onSubmit)}>
-        <GameForm form={form} showSeriesOption={!isExpansion && !isEditing} showStatus={!isEditing || !editingGame?.isSeries} showDetails={!isEditing || !editingGame?.isSeries}>
+        <GameForm form={form} showKind={!isInCollection && showKind} showStatus={showStatus} showDetails={showStatus}>
           <div className="flex justify-end gap-2 pt-4 border-t border-surface-border dark:border-surface-border-dark mt-6">
             <Button type="button" variant="ghost" onClick={closeGameModal}>Отмена</Button>
             <Button type="submit" variant="primary">{isEditing ? 'Сохранить' : 'Добавить'}</Button>

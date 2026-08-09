@@ -11,7 +11,6 @@ interface GameState {
   isLoading: boolean;
   filters: GameFilters;
   sort: SortConfig;
-
   loadAll: () => Promise<void>;
   addGame: (data: CreateGameData) => Promise<Game>;
   updateGame: (id: string, data: UpdateGameData) => Promise<void>;
@@ -25,12 +24,9 @@ interface GameState {
   setSearch: (search: string) => void;
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
-  games: [],
-  cycles: [],
-  isLoading: false,
-  filters: { ...DEFAULT_FILTERS },
-  sort: { ...DEFAULT_SORT },
+export const useGameStore = create<GameState>((set) => ({
+  games: [], cycles: [], isLoading: false,
+  filters: { ...DEFAULT_FILTERS }, sort: { ...DEFAULT_SORT },
 
   loadAll: async () => {
     set({ isLoading: true });
@@ -38,50 +34,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ games, cycles, isLoading: false });
   },
 
-  addGame: async (data) => {
-    const game = await gameService.add(data);
-    set(s => ({ games: [...s.games, game] }));
-    return game;
-  },
-
-  updateGame: async (id, data) => {
-    const updated = await gameService.update(id, data);
-    if (updated) {
-      set(s => ({ games: s.games.map(g => g.id === id ? updated : g) }));
-    }
-  },
-
+  addGame: async (data) => { const g = await gameService.add(data); set(s => ({ games: [...s.games, g] })); return g; },
+  updateGame: async (id, data) => { const u = await gameService.update(id, data); if (u) set(s => ({ games: s.games.map(g => g.id === id ? u : g) })); },
   deleteGame: async (id) => {
-    // Удаляем саму игру и все её дополнения
-    const expansions = get().games.filter(g => g.parentId === id);
     const ok = await gameService.delete(id);
-    if (ok) {
-      set(s => ({
-        games: s.games.filter(g => g.id !== id && !expansions.map(e => e.id).includes(g.id)),
-        cycles: s.cycles.filter(c => c.parentGameId !== id),
-      }));
-    }
+    if (ok) set(s => ({ games: s.games.filter(g => g.id !== id && g.collectionId !== id) }));
     return ok;
   },
 
-  addCycle: async (data) => {
-    const cycle = await cycleService.add(data);
-    set(s => ({ cycles: [...s.cycles, cycle] }));
-    return cycle;
-  },
-
-  updateCycle: async (id, data) => {
-    await cycleService.update(id, data);
-    set(s => ({ cycles: s.cycles.map(c => c.id === id ? { ...c, ...data } : c) }));
-  },
-
-  deleteCycle: async (id) => {
-    await cycleService.delete(id);
-    set(s => ({
-      cycles: s.cycles.filter(c => c.id !== id),
-      games: s.games.map(g => g.cycleId === id ? { ...g, cycleId: null } : g),
-    }));
-  },
+  addCycle: async (data) => { const c = await cycleService.add(data); set(s => ({ cycles: [...s.cycles, c] })); return c; },
+  updateCycle: async (id, data) => { await cycleService.update(id, data); set(s => ({ cycles: s.cycles.map(c => c.id === id ? { ...c, ...data } : c) })); },
+  deleteCycle: async (id) => { await cycleService.delete(id); set(s => ({ cycles: s.cycles.filter(c => c.id !== id), games: s.games.map(g => g.cycleId === id ? { ...g, cycleId: null } : g) })); },
 
   setFilters: (f) => set(s => ({ filters: { ...s.filters, ...f } })),
   resetFilters: () => set({ filters: { ...DEFAULT_FILTERS } }),

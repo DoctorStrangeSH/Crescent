@@ -2,13 +2,16 @@ export type GameStatus = 'owned' | 'wishlist';
 export type GameLanguage = 'russian' | 'english' | 'languageIndependent' | 'other';
 export type Complexity = 1 | 2 | 3 | 4 | 5;
 
+/** Тип игры внутри хранилища */
+export type GameKind = 'base' | 'expansion' | 'standalone';
+
 export interface Game {
   id: string;
   title: string;
   titleOriginal: string;
-  parentId: string | null;
+  collectionId: string | null;
   cycleId: string | null;
-  isSeries: boolean;
+  kind: GameKind;
   year: number | null;
   publisher: string;
   designers: string[];
@@ -45,7 +48,7 @@ export interface Game {
 
 export interface Cycle {
   id: string;
-  parentGameId: string;
+  collectionId: string;
   title: string;
   sortOrder: number;
   createdAt: Date;
@@ -53,13 +56,13 @@ export interface Cycle {
 }
 
 export interface GameStats {
-  totalExpansions: number;
-  ownedExpansions: number;
-  wishlistExpansions: number;
+  total: number;
+  owned: number;
+  wishlist: number;
   totalValue: number;
   completionPercent: number;
 }
 
 export type CreateGameData = Pick<Game, 'title'> & Partial<Omit<Game, 'id' | 'createdAt' | 'updatedAt'>>;
 export type UpdateGameData = Partial<Omit<Game, 'id' | 'createdAt' | 'updatedAt'>>;
-export type CreateCycleData = Pick<Cycle, 'title' | 'parentGameId'> & Partial<Omit<Cycle, 'id' | 'createdAt' | 'updatedAt'>>;
+export type CreateCycleData = Pick<Cycle, 'title' | 'collectionId'> & Partial<Omit<Cycle, 'id' | 'createdAt' | 'updatedAt'>>;

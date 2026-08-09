@@ -3,10 +3,7 @@ import type { GameStatus, GameLanguage, Complexity } from './game';
 export type SortField = 'title' | 'createdAt' | 'updatedAt' | 'purchasePrice' | 'year' | 'bggRating';
 export type SortDirection = 'asc' | 'desc';
 
-export interface SortConfig {
-  field: SortField;
-  direction: SortDirection;
-}
+export interface SortConfig { field: SortField; direction: SortDirection; }
 
 export interface GameFilters {
   search: string;
@@ -20,17 +17,7 @@ export interface GameFilters {
 }
 
 export const DEFAULT_FILTERS: GameFilters = {
-  search: '',
-  status: 'all',
-  hasProtectors: null,
-  language: 'all',
-  complexity: 'all',
-  isFavorite: null,
-  minYear: null,
-  maxPrice: null,
+  search: '', status: 'all', hasProtectors: null, language: 'all', complexity: 'all', isFavorite: null, minYear: null, maxPrice: null,
 };
 
-export const DEFAULT_SORT: SortConfig = {
-  field: 'createdAt',
-  direction: 'desc',
-};
+export const DEFAULT_SORT: SortConfig = { field: 'createdAt', direction: 'desc' };

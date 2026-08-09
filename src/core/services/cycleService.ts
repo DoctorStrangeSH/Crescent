@@ -1,32 +1,19 @@
 import { db } from '../db/database';
 import type { Cycle, CreateCycleData } from '../types/game';
 
-function generateId(): string {
-  return crypto.randomUUID();
-}
+function generateId(): string { return crypto.randomUUID(); }
 
 export const cycleService = {
-  async getByParentGameId(parentGameId: string): Promise<Cycle[]> {
-    return db.cycles.where('parentGameId').equals(parentGameId).sortBy('sortOrder');
+  async getByCollectionId(collectionId: string): Promise<Cycle[]> {
+    return db.cycles.where('collectionId').equals(collectionId).sortBy('sortOrder');
   },
-
-  async getAll(): Promise<Cycle[]> {
-    return db.cycles.toArray();
-  },
+  async getAll(): Promise<Cycle[]> { return db.cycles.toArray(); },
 
   async add(data: CreateCycleData): Promise<Cycle> {
     const now = new Date();
-    const maxOrder = await db.cycles.where('parentGameId').equals(data.parentGameId).count();
-    const cycle: Cycle = {
-      id: generateId(),
-      parentGameId: data.parentGameId,
-      title: data.title,
-      sortOrder: data.sortOrder ?? maxOrder,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await db.cycles.add(cycle);
-    return cycle;
+    const maxOrder = await db.cycles.where('collectionId').equals(data.collectionId).count();
+    const cycle: Cycle = { id: generateId(), collectionId: data.collectionId, title: data.title, sortOrder: data.sortOrder ?? maxOrder, createdAt: now, updatedAt: now };
+    await db.cycles.add(cycle); return cycle;
   },
 
   async update(id: string, data: Partial<Cycle>): Promise<void> {
