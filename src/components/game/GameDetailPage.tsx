@@ -27,9 +27,6 @@ function GameDetailPage() {
   const [stats, setStats] = useState<GameStats | null>(null);
   const [showAddCycle, setShowAddCycle] = useState(false);
   const [newCycleTitle, setNewCycleTitle] = useState('');
-  const [collapsedCycles, setCollapsedCycles] = useState<Set<string>>(new Set());
-  const [collapsedBase, setCollapsedBase] = useState(false);
-  const [collapsedStandalone, setCollapsedStandalone] = useState(false);
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
   const [editingCycleId, setEditingCycleId] = useState<string | null>(null);
   const [editCycleTitle, setEditCycleTitle] = useState('');
@@ -38,9 +35,34 @@ function GameDetailPage() {
   const [draggedGameId, setDraggedGameId] = useState<string | null>(null);
   const [showBulkAdd, setShowBulkAdd] = useState(false);
 
+  // Свёрнутость с сохранением в localStorage
+  const [collapsedCycles, setCollapsedCycles] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(`crescent-collapsed-${gameId}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [collapsedBase, setCollapsedBase] = useState(() => {
+    try { return localStorage.getItem(`crescent-collapsed-base-${gameId}`) === 'true'; }
+    catch { return false; }
+  });
+  const [collapsedStandalone, setCollapsedStandalone] = useState(() => {
+    try { return localStorage.getItem(`crescent-collapsed-standalone-${gameId}`) === 'true'; }
+    catch { return false; }
+  });
+
   useEffect(() => {
     if (gameId) { loadAll(); gameService.getById(gameId).then(g => { if (g) setGame(g); }); gameService.getStats(gameId).then(setStats); }
   }, [gameId, games.length]);
+
+  // Сохраняем свёрнутость
+  useEffect(() => {
+    if (gameId) {
+      localStorage.setItem(`crescent-collapsed-${gameId}`, JSON.stringify([...collapsedCycles]));
+      localStorage.setItem(`crescent-collapsed-base-${gameId}`, String(collapsedBase));
+      localStorage.setItem(`crescent-collapsed-standalone-${gameId}`, String(collapsedStandalone));
+    }
+  }, [collapsedCycles, collapsedBase, collapsedStandalone, gameId]);
 
   if (!gameId || !game) return null;
 
@@ -104,16 +126,13 @@ function GameDetailPage() {
     const gid = e.dataTransfer.getData('text/plain'); if (!gid || gid === target.id) return;
     const dragged = games.find(g => g.id === gid); if (!dragged) return;
 
-    // Проверяем: в одной зоне?
-    const sameZone = dragged.cycleId === target.cycleId && dragged.kind === target.kind && dragged.sortOrder >= 0 === target.sortOrder >= 0;
+    const sameZone = dragged.cycleId === target.cycleId && dragged.kind === target.kind && (dragged.sortOrder >= 0) === (target.sortOrder >= 0);
 
     if (sameZone) {
-      // Меняем местами
       const tmp = dragged.sortOrder;
       await updateGame(gid, { sortOrder: target.sortOrder });
       await updateGame(target.id, { sortOrder: tmp });
     } else {
-      // Разные зоны — перемещаем в конец зоны target
       let newOrder = 0;
       if (target.kind === 'base') newOrder = baseGames.length > 0 ? Math.max(...baseGames.map(g => g.sortOrder)) + 1 : 0;
       else if (target.kind === 'expansion') newOrder = expansions.length > 0 ? Math.max(...expansions.map(g => g.sortOrder)) + 1 : 0;
@@ -239,7 +258,7 @@ function GameDetailPage() {
 
       {/* Дополнения */}
       {expansions.length > 0 && (
-        <Section title="Дополнения" icon="📦" collapsed={false} onToggle={() => { }} count={expansions.length} owned={expansions.filter(e => e.status === 'owned').length} zone="expansion" dragOverZone={dragOverZone}
+        <Section title="Дополнения" icon="📦" collapsed={false} onToggle={() => {}} count={expansions.length} owned={expansions.filter(e => e.status === 'owned').length} zone="expansion" dragOverZone={dragOverZone}
           onDrop={(e: React.DragEvent) => handleDropOnZone(e, 'expansion')} onDragOver={(e: React.DragEvent) => handleZoneDragOver(e, 'expansion')} onDragLeave={handleDragLeave} collapsible={false}>
           {expansions.map(e => (
             <GameRow key={e.id} game={e} draggedGameId={draggedGameId} dragOverGameId={dragOverGameId}
@@ -263,7 +282,7 @@ function GameDetailPage() {
 
       {/* Без категории */}
       {uncategorized.length > 0 && (
-        <Section title="Без категории" icon="❓" collapsed={false} onToggle={() => { }} count={uncategorized.length} owned={uncategorized.filter(e => e.status === 'owned').length} zone="uncategorized" dragOverZone={dragOverZone}
+        <Section title="Без категории" icon="❓" collapsed={false} onToggle={() => {}} count={uncategorized.length} owned={uncategorized.filter(e => e.status === 'owned').length} zone="uncategorized" dragOverZone={dragOverZone}
           onDrop={(e: React.DragEvent) => handleDropOnZone(e, 'uncategorized')} onDragOver={(e: React.DragEvent) => handleZoneDragOver(e, 'uncategorized')} onDragLeave={handleDragLeave} collapsible={false}>
           {uncategorized.map(e => (
             <GameRow key={e.id} game={e} draggedGameId={draggedGameId} dragOverGameId={dragOverGameId}
