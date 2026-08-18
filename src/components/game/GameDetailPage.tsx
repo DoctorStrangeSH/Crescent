@@ -6,7 +6,8 @@ import { gameService } from '../../core/services/gameService';
 import type { Game, GameStats } from '../../core/types/game';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
-import { ArrowLeft, Plus, Check, ShoppingCart, Star, Shield, Edit3, Trash2, FolderPlus, Layers, Package, Image, ChevronDown, ChevronRight, GripVertical, X } from 'lucide-react';
+import BulkAddModal from '../forms/BulkAddModal';
+import { ArrowLeft, Plus, Check, ShoppingCart, Star, Shield, Edit3, Trash2, FolderPlus, Layers, Package, Image, ChevronDown, ChevronRight, GripVertical, X, FileText } from 'lucide-react';
 
 function GameDetailPage() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -35,6 +36,7 @@ function GameDetailPage() {
   const [dragOverZone, setDragOverZone] = useState<string | null>(null);
   const [dragOverGameId, setDragOverGameId] = useState<string | null>(null);
   const [draggedGameId, setDraggedGameId] = useState<string | null>(null);
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
 
   useEffect(() => {
     if (gameId) { loadAll(); gameService.getById(gameId).then(g => { if (g) setGame(g); }); gameService.getStats(gameId).then(setStats); }
@@ -159,6 +161,7 @@ function GameDetailPage() {
         <div className="flex flex-wrap gap-2">
           <Button icon={<Plus className="w-4 h-4" />} onClick={handleAdd}>Добавить игру</Button>
           <Button icon={<FolderPlus className="w-4 h-4" />} variant="secondary" onClick={() => setShowAddCycle(!showAddCycle)}>Создать цикл</Button>
+          <Button icon={<FileText className="w-4 h-4" />} variant="ghost" size="sm" onClick={() => setShowBulkAdd(true)}>Массово</Button>
         </div>
       )}
 
@@ -241,6 +244,8 @@ function GameDetailPage() {
       {!isCollection && (
         <div className="text-center py-12"><Package className="w-12 h-12 text-surface-muted mx-auto mb-3" /><p className="text-surface-muted">Одиночная игра</p></div>
       )}
+
+      <BulkAddModal isOpen={showBulkAdd} onClose={() => setShowBulkAdd(false)} collectionId={gameId} />
 
       {fullscreenPhoto && (
         <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setFullscreenPhoto(null)}>
