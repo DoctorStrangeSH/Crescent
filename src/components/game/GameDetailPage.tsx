@@ -130,23 +130,43 @@ function GameDetailPage() {
     const dragged = games.find(g => g.id === gid);
     if (!dragged) return;
 
-    // Если в одном цикле — просто меняем sortOrder
-    if (dragged.cycleId === target.cycleId) {
-      const tmp = dragged.sortOrder;
-      await updateGame(gid, { sortOrder: target.sortOrder });
-      await updateGame(target.id, { sortOrder: tmp });
+    // В одном цикле — перенумеровываем все игры цикла
+    if (dragged.cycleId === target.cycleId && target.cycleId) {
+      const cycleGames = items
+        .filter(g => g.cycleId === target.cycleId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      // Убираем перетаскиваемую игру
+      const withoutDragged = cycleGames.filter(g => g.id !== gid);
+      // Находим индекс target
+      const targetIndex = withoutDragged.findIndex(g => g.id === target.id);
+      // Вставляем перетаскиваемую перед target
+      const newOrder = [...withoutDragged.slice(0, targetIndex), dragged, ...withoutDragged.slice(targetIndex)];
+
+      // Перенумеровываем всё с 0
+      for (let i = 0; i < newOrder.length; i++) {
+        await updateGame(newOrder[i].id, { sortOrder: i });
+      }
       return;
     }
 
-    // Если в одной зоне (оба без цикла, одного kind)
+    // В одной зоне (без цикла) — тоже перенумеровываем
     if (!dragged.cycleId && !target.cycleId && dragged.kind === target.kind) {
-      const tmp = dragged.sortOrder;
-      await updateGame(gid, { sortOrder: target.sortOrder });
-      await updateGame(target.id, { sortOrder: tmp });
+      const zoneGames = items
+        .filter(g => !g.cycleId && g.kind === target.kind)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      const withoutDragged = zoneGames.filter(g => g.id !== gid);
+      const targetIndex = withoutDragged.findIndex(g => g.id === target.id);
+      const newOrder = [...withoutDragged.slice(0, targetIndex), dragged, ...withoutDragged.slice(targetIndex)];
+
+      for (let i = 0; i < newOrder.length; i++) {
+        await updateGame(newOrder[i].id, { sortOrder: i });
+      }
       return;
     }
 
-    // Разные зоны — добавляем в конец зоны target
+    // Разные зоны — добавляем в конец
     let newOrder = 0;
     if (target.cycleId) {
       const cg = items.filter(e => e.cycleId === target.cycleId);
