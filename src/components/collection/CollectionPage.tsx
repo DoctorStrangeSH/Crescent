@@ -7,7 +7,7 @@ import { gameService } from '../../core/services/gameService';
 import type { Game, GameStats } from '../../core/types/game';
 import EmptyState from '../ui/EmptyState';
 import Button from '../ui/Button';
-import { Plus, Library, Package, Trash2, Star, Shield, Edit3, Check, ShoppingCart } from 'lucide-react';
+import { Plus, Library, Package, Trash2, Star, Shield, Edit3 } from 'lucide-react';
 
 function CollectionPage() {
   const navigate = useNavigate();
@@ -32,6 +32,7 @@ function CollectionPage() {
     load();
   }, [games]);
 
+  // ВСЕ корневые игры (без collectionId) — и хранилища, и одиночные, и без категории
   const rootGames = games.filter(g => !g.collectionId);
 
   const handleDelete = async (e: React.MouseEvent, game: Game) => {
@@ -52,7 +53,7 @@ function CollectionPage() {
   if (rootGames.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[80vh]">
-        <EmptyState icon={<Library className="w-12 h-12 text-surface-muted" />} title="Коллекция пуста" description="Добавьте хранилище или игру" actionLabel="Добавить" onAction={() => openAddGameModal()} />
+        <EmptyState icon={<Library className="w-12 h-12 text-surface-muted" />} title="Коллекция пуста" description="Добавьте своё первое хранилище" actionLabel="Создать хранилище" onAction={() => openAddGameModal()} />
       </div>
     );
   }
@@ -61,65 +62,68 @@ function CollectionPage() {
     <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Коллекция</h1><p className="text-sm text-surface-muted mt-0.5">{rootGames.length} элементов</p></div>
-        <Button icon={<Plus className="w-4 h-4" />} onClick={() => openAddGameModal()}>Добавить</Button>
+        <Button icon={<Plus className="w-4 h-4" />} onClick={() => openAddGameModal()}>Создать хранилище</Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         <AnimatePresence mode="popLayout">
           {rootGames.map(game => {
             const stats = statsMap[game.id];
-            const hasContent = game.kind === 'collection' && stats && stats.total > 0;
+            const hasContent = stats && stats.total > 0;
             return (
               <motion.div key={game.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                 whileHover={{ y: -4 }}
                 onClick={() => navigate(`/collection/${game.id}`)}
-                className="group cursor-pointer bg-white dark:bg-surface-card-dark rounded-2xl border border-surface-border dark:border-surface-border-dark shadow-card dark:shadow-card-dark hover:shadow-card-hover dark:hover:shadow-card-hover-dark transition-all duration-300 overflow-hidden">
-                <div className="relative h-52 bg-gradient-to-br from-crescent-accent/10 to-crescent-gold/10 flex items-center justify-center">
+                className="group cursor-pointer bg-white dark:bg-surface-card-dark rounded-2xl border border-surface-border dark:border-surface-border-dark shadow-card dark:shadow-card-dark hover:shadow-card-hover dark:hover:shadow-card-hover-dark transition-all duration-300 overflow-hidden flex flex-col">
+                {/* Картинка */}
+                <div className="relative h-40 bg-gradient-to-br from-crescent-accent/10 to-crescent-gold/10 flex items-center justify-center overflow-hidden">
                   {game.photos?.length > 0 ? (
-                    <img src={game.photos[0]} alt="" className="w-full h-full object-contain p-4" />
+                    <img src={game.photos[0]} alt="" className="w-full h-full object-contain p-3" />
                   ) : (
-                    <Package className="w-16 h-16 text-surface-muted/30" />
+                    <Package className="w-14 h-14 text-surface-muted/30" />
                   )}
-                  {/* Кнопки на карточке */}
-                  <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Кнопки */}
+                  <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     {game.kind !== 'collection' && (
-                      <button onClick={(e) => handleToggle(e, game)} className="w-9 h-9 rounded-xl bg-white/90 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center text-base hover:scale-110 transition-transform shadow-sm">
-                        {game.status === 'owned' ? <Check className="w-4 h-4 text-emerald-500" /> : <ShoppingCart className="w-4 h-4 text-amber-500" />}
+                      <button onClick={(e) => handleToggle(e, game)} className="w-8 h-8 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center text-sm hover:scale-110 transition-transform">
+                        {game.status === 'owned' ? '✅' : '🎯'}
                       </button>
                     )}
-                    <button onClick={(e) => handleEdit(e, game)} className="w-9 h-9 rounded-xl bg-white/90 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center hover:scale-110 transition-transform shadow-sm">
-                      <Edit3 className="w-4 h-4 text-gray-700 dark:text-white" />
-                    </button>
-                    <button onClick={(e) => handleDelete(e, game)} className="w-9 h-9 rounded-xl bg-white/90 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <button onClick={(e) => handleEdit(e, game)} className="w-8 h-8 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center hover:scale-110 transition-transform"><Edit3 className="w-3.5 h-3.5" /></button>
+                    <button onClick={(e) => handleDelete(e, game)} className="w-8 h-8 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
-                  {/* Прогресс-бар */}
+                  {/* Прогресс */}
                   {hasContent && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-surface-border dark:bg-surface-border-dark">
-                      <div className="h-full bg-gradient-to-r from-crescent-accent to-crescent-gold transition-all duration-700" style={{ width: `${stats.completionPercent}%` }} />
-                    </div>
-                  )}
-                  {/* Бейдж хранилища */}
-                  {game.kind === 'collection' && (
-                    <div className="absolute top-3 left-3">
-                      <span className="px-2 py-1 text-[10px] font-bold rounded-lg bg-crescent-accent/20 text-crescent-accent">📚 ХРАНИЛИЩЕ</span>
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-border dark:bg-surface-border-dark">
+                      <div className="h-full bg-gradient-to-r from-crescent-accent to-crescent-gold" style={{ width: `${stats.completionPercent}%` }} />
                     </div>
                   )}
                 </div>
-                <div className="p-5">
-                  <h3 className="font-bold text-base text-gray-900 dark:text-white line-clamp-2 leading-snug bg-white/90 dark:bg-black/70 backdrop-blur-sm px-3 py-2 rounded-xl -mt-1">{game.title}</h3>
-                  <div className="flex items-center justify-between mt-3">
+                {/* Информация */}
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {game.kind === 'collection' ? (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300">📚 ХРАНИЛИЩЕ</span>
+                    ) : game.kind === 'base' ? (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">🎯 БАЗА</span>
+                    ) : game.kind === 'expansion' ? (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300">📦 ДОП</span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">🎲 ИГРА</span>
+                    )}
+                  </div>
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-2 leading-snug">{game.title}</h3>
+                  <div className="flex items-center justify-between mt-auto pt-2">
                     {hasContent ? (
                       <>
-                        <span className="text-sm text-surface-muted">{stats.owned}/{stats.total} предметов</span>
-                        <span className="text-sm font-bold text-crescent-accent">{stats.completionPercent}%</span>
+                        <span className="text-xs text-surface-muted">{stats.owned}/{stats.total} предметов</span>
+                        <span className="text-xs font-bold text-crescent-accent">{stats.completionPercent}%</span>
                       </>
                     ) : (
                       <div className="flex items-center gap-2">
-                        {game.isFavorite && <Star className="w-4 h-4 text-amber-400 fill-amber-400" />}
-                        {game.hasProtectors && <Shield className="w-4 h-4 text-purple-400" />}
-                        <span className="text-sm text-surface-muted">{game.kind === 'collection' ? 'Хранилище' : game.kind === 'base' ? 'Базовая игра' : 'Игра'}</span>
+                        {game.isFavorite && <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />}
+                        {game.hasProtectors && <Shield className="w-3.5 h-3.5 text-purple-400" />}
+                        <span className="text-xs text-surface-muted">{game.kind === 'collection' ? 'Пустое хранилище' : game.status === 'owned' ? 'Есть' : 'Хочу'}</span>
                       </div>
                     )}
                   </div>

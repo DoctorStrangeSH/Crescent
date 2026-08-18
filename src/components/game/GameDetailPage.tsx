@@ -50,6 +50,7 @@ function GameDetailPage() {
   const baseGames = items.filter(e => e.kind === 'base' && !e.cycleId).sort((a, b) => a.sortOrder - b.sortOrder);
   const expansions = items.filter(e => e.kind === 'expansion' && !e.cycleId).sort((a, b) => a.sortOrder - b.sortOrder);
   const standaloneGames = items.filter(e => e.kind === 'standalone' && !e.cycleId).sort((a, b) => a.sortOrder - b.sortOrder);
+  const uncategorized = items.filter(e => !e.cycleId && e.kind !== 'base' && e.kind !== 'expansion' && e.kind !== 'standalone');
 
   const handleToggle = async (g: Game) => { await updateGame(g.id, { status: g.status === 'owned' ? 'wishlist' : 'owned' }); };
   const handleAdd = () => openAddGameModal(gameId);
@@ -78,14 +79,24 @@ function GameDetailPage() {
     e.preventDefault(); setDragOverZone(null);
     const gid = e.dataTransfer.getData('text/plain'); if (!gid) return;
     let newOrder = 0;
-    if (zone === 'base') newOrder = baseGames.length > 0 ? Math.max(...baseGames.map(g => g.sortOrder)) + 1 : 0;
-    else if (zone === 'expansion') newOrder = expansions.length > 0 ? Math.max(...expansions.map(g => g.sortOrder)) + 1 : 0;
-    else if (zone === 'standalone') newOrder = standaloneGames.length > 0 ? Math.max(...standaloneGames.map(g => g.sortOrder)) + 1 : 0;
-    else if (zone === 'cycle' && cycleId) {
+    if (zone === 'base') {
+      newOrder = baseGames.length > 0 ? Math.max(...baseGames.map(g => g.sortOrder)) + 1 : 0;
+      await updateGame(gid, { kind: 'base', cycleId: null, sortOrder: newOrder });
+    } else if (zone === 'expansion') {
+      newOrder = expansions.length > 0 ? Math.max(...expansions.map(g => g.sortOrder)) + 1 : 0;
+      await updateGame(gid, { kind: 'expansion', cycleId: null, sortOrder: newOrder });
+    } else if (zone === 'standalone') {
+      newOrder = standaloneGames.length > 0 ? Math.max(...standaloneGames.map(g => g.sortOrder)) + 1 : 0;
+      await updateGame(gid, { kind: 'standalone', cycleId: null, sortOrder: newOrder });
+    } else if (zone === 'uncategorized') {
+      const unc = items.filter(e => !e.cycleId && e.kind !== 'base' && e.kind !== 'expansion' && e.kind !== 'standalone');
+      newOrder = unc.length > 0 ? Math.max(...unc.map(g => g.sortOrder)) + 1 : 0;
+      await updateGame(gid, { cycleId: null, sortOrder: newOrder });
+    } else if (zone === 'cycle' && cycleId) {
       const cg = items.filter(e => e.cycleId === cycleId);
       newOrder = cg.length > 0 ? Math.max(...cg.map(g => g.sortOrder)) + 1 : 0;
+      await updateGame(gid, { cycleId, sortOrder: newOrder });
     }
-    await updateGame(gid, { cycleId: zone === 'cycle' ? cycleId : null, sortOrder: newOrder });
   };
 
   const handleDropOnGame = async (e: React.DragEvent, target: Game) => {
@@ -123,8 +134,8 @@ function GameDetailPage() {
               <div className="w-20 h-20 rounded-2xl bg-surface-hover dark:bg-surface-hover-dark border border-surface-border dark:border-surface-border-dark flex items-center justify-center"><Package className="w-10 h-10 text-surface-muted" /></div>
             )}
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white bg-white/90 dark:bg-black/70 backdrop-blur-sm px-4 py-2 rounded-2xl inline-block">{game.title}</h1>
-              {game.titleOriginal && <p className="text-sm text-surface-muted">{game.titleOriginal}</p>}
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white inline-block bg-white/90 dark:bg-black/70 backdrop-blur-sm px-4 py-2 rounded-2xl">{game.title}</h1>
+              {game.titleOriginal && <p className="text-sm text-surface-muted mt-1">{game.titleOriginal}</p>}
               <div className="flex items-center gap-2 mt-1.5">
                 {isCollection && <Badge variant="purple">📚 Хранилище</Badge>}
                 {!isCollection && game.status && (
@@ -219,7 +230,7 @@ function GameDetailPage() {
 
       {/* Дополнения */}
       {expansions.length > 0 && (
-        <Section title="Дополнения" icon="📦" collapsed={false} onToggle={() => { }} count={expansions.length} owned={expansions.filter(e => e.status === 'owned').length} zone="expansion" dragOverZone={dragOverZone}
+        <Section title="Дополнения" icon="📦" collapsed={false} onToggle={() => {}} count={expansions.length} owned={expansions.filter(e => e.status === 'owned').length} zone="expansion" dragOverZone={dragOverZone}
           onDrop={(e: React.DragEvent) => handleDropOnZone(e, 'expansion')} onDragOver={(e: React.DragEvent) => handleZoneDragOver(e, 'expansion')} onDragLeave={handleDragLeave} collapsible={false}>
           {expansions.map(e => (
             <GameRow key={e.id} game={e} draggedGameId={draggedGameId} dragOverGameId={dragOverGameId}
@@ -234,6 +245,18 @@ function GameDetailPage() {
         <Section title="Самостоятельные игры" icon="🎲" collapsed={collapsedStandalone} onToggle={() => setCollapsedStandalone(!collapsedStandalone)} count={standaloneGames.length} owned={standaloneGames.filter(e => e.status === 'owned').length} zone="standalone" dragOverZone={dragOverZone}
           onDrop={(e: React.DragEvent) => handleDropOnZone(e, 'standalone')} onDragOver={(e: React.DragEvent) => handleZoneDragOver(e, 'standalone')} onDragLeave={handleDragLeave}>
           {standaloneGames.map(e => (
+            <GameRow key={e.id} game={e} draggedGameId={draggedGameId} dragOverGameId={dragOverGameId}
+              onToggle={() => handleToggle(e)} onEdit={() => openEditGameModal(e.id)} onDelete={() => deleteGame(e.id)}
+              onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleGameDragOver} onDrop={handleDropOnGame} onDragLeave={handleDragLeave} />
+          ))}
+        </Section>
+      )}
+
+      {/* Без категории */}
+      {uncategorized.length > 0 && (
+        <Section title="Без категории" icon="❓" collapsed={false} onToggle={() => {}} count={uncategorized.length} owned={uncategorized.filter(e => e.status === 'owned').length} zone="uncategorized" dragOverZone={dragOverZone}
+          onDrop={(e: React.DragEvent) => handleDropOnZone(e, 'uncategorized')} onDragOver={(e: React.DragEvent) => handleZoneDragOver(e, 'uncategorized')} onDragLeave={handleDragLeave} collapsible={false}>
+          {uncategorized.map(e => (
             <GameRow key={e.id} game={e} draggedGameId={draggedGameId} dragOverGameId={dragOverGameId}
               onToggle={() => handleToggle(e)} onEdit={() => openEditGameModal(e.id)} onDelete={() => deleteGame(e.id)}
               onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleGameDragOver} onDrop={handleDropOnGame} onDragLeave={handleDragLeave} />
@@ -299,7 +322,9 @@ function GameRow({ game, draggedGameId, dragOverGameId, onToggle, onEdit, onDele
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-gray-900 dark:text-white truncate">{game.title}</p>
         <div className="flex items-center gap-2 mt-0.5">
-          <Badge size="sm" variant={game.kind === 'base' ? 'purple' : game.kind === 'expansion' ? 'default' : 'gold'}>{game.kind === 'base' ? 'База' : game.kind === 'expansion' ? 'Доп' : 'Соло'}</Badge>
+          <Badge size="sm" variant={game.kind === 'base' ? 'purple' : game.kind === 'expansion' ? 'default' : game.kind === 'standalone' ? 'gold' : 'danger'}>
+            {game.kind === 'base' ? 'База' : game.kind === 'expansion' ? 'Доп' : game.kind === 'standalone' ? 'Соло' : '???'}
+          </Badge>
           {game.isFavorite && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
           {game.hasProtectors && <Shield className="w-3 h-3 text-purple-400" />}
         </div>
