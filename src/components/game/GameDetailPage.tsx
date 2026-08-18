@@ -122,26 +122,41 @@ function GameDetailPage() {
   };
 
   const handleDropOnGame = async (e: React.DragEvent, target: Game) => {
-    e.preventDefault(); e.stopPropagation(); setDragOverGameId(null);
-    const gid = e.dataTransfer.getData('text/plain'); if (!gid || gid === target.id) return;
-    const dragged = games.find(g => g.id === gid); if (!dragged) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverGameId(null);
+    const gid = e.dataTransfer.getData('text/plain');
+    if (!gid || gid === target.id) return;
+    const dragged = games.find(g => g.id === gid);
+    if (!dragged) return;
 
-    const sameZone = dragged.cycleId === target.cycleId && dragged.kind === target.kind && (dragged.sortOrder >= 0) === (target.sortOrder >= 0);
-
-    if (sameZone) {
+    // Если в одном цикле — просто меняем sortOrder
+    if (dragged.cycleId === target.cycleId) {
       const tmp = dragged.sortOrder;
       await updateGame(gid, { sortOrder: target.sortOrder });
       await updateGame(target.id, { sortOrder: tmp });
+      return;
+    }
+
+    // Если в одной зоне (оба без цикла, одного kind)
+    if (!dragged.cycleId && !target.cycleId && dragged.kind === target.kind) {
+      const tmp = dragged.sortOrder;
+      await updateGame(gid, { sortOrder: target.sortOrder });
+      await updateGame(target.id, { sortOrder: tmp });
+      return;
+    }
+
+    // Разные зоны — добавляем в конец зоны target
+    let newOrder = 0;
+    if (target.cycleId) {
+      const cg = items.filter(e => e.cycleId === target.cycleId);
+      newOrder = cg.length > 0 ? Math.max(...cg.map(g => g.sortOrder)) + 1 : 0;
+      await updateGame(gid, { cycleId: target.cycleId, sortOrder: newOrder });
     } else {
-      let newOrder = 0;
       if (target.kind === 'base') newOrder = baseGames.length > 0 ? Math.max(...baseGames.map(g => g.sortOrder)) + 1 : 0;
       else if (target.kind === 'expansion') newOrder = expansions.length > 0 ? Math.max(...expansions.map(g => g.sortOrder)) + 1 : 0;
       else if (target.kind === 'standalone') newOrder = standaloneGames.length > 0 ? Math.max(...standaloneGames.map(g => g.sortOrder)) + 1 : 0;
-      else if (target.cycleId) {
-        const cg = items.filter(e => e.cycleId === target.cycleId);
-        newOrder = cg.length > 0 ? Math.max(...cg.map(g => g.sortOrder)) + 1 : 0;
-      }
-      await updateGame(gid, { kind: target.kind, cycleId: target.cycleId, sortOrder: newOrder });
+      await updateGame(gid, { kind: target.kind, cycleId: null, sortOrder: newOrder });
     }
   };
 
@@ -258,7 +273,7 @@ function GameDetailPage() {
 
       {/* Дополнения */}
       {expansions.length > 0 && (
-        <Section title="Дополнения" icon="📦" collapsed={false} onToggle={() => {}} count={expansions.length} owned={expansions.filter(e => e.status === 'owned').length} zone="expansion" dragOverZone={dragOverZone}
+        <Section title="Дополнения" icon="📦" collapsed={false} onToggle={() => { }} count={expansions.length} owned={expansions.filter(e => e.status === 'owned').length} zone="expansion" dragOverZone={dragOverZone}
           onDrop={(e: React.DragEvent) => handleDropOnZone(e, 'expansion')} onDragOver={(e: React.DragEvent) => handleZoneDragOver(e, 'expansion')} onDragLeave={handleDragLeave} collapsible={false}>
           {expansions.map(e => (
             <GameRow key={e.id} game={e} draggedGameId={draggedGameId} dragOverGameId={dragOverGameId}
@@ -282,7 +297,7 @@ function GameDetailPage() {
 
       {/* Без категории */}
       {uncategorized.length > 0 && (
-        <Section title="Без категории" icon="❓" collapsed={false} onToggle={() => {}} count={uncategorized.length} owned={uncategorized.filter(e => e.status === 'owned').length} zone="uncategorized" dragOverZone={dragOverZone}
+        <Section title="Без категории" icon="❓" collapsed={false} onToggle={() => { }} count={uncategorized.length} owned={uncategorized.filter(e => e.status === 'owned').length} zone="uncategorized" dragOverZone={dragOverZone}
           onDrop={(e: React.DragEvent) => handleDropOnZone(e, 'uncategorized')} onDragOver={(e: React.DragEvent) => handleZoneDragOver(e, 'uncategorized')} onDragLeave={handleDragLeave} collapsible={false}>
           {uncategorized.map(e => (
             <GameRow key={e.id} game={e} draggedGameId={draggedGameId} dragOverGameId={dragOverGameId}
