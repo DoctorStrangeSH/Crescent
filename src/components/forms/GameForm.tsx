@@ -36,10 +36,6 @@ function GameForm({ form, children, showKind = true, showStatus = true, showDeta
     reader.readAsDataURL(file);
   };
 
-  // Если создаём новое снаружи — всегда collection
-  // Если внутри коллекции — показываем выбор база/доп/соло
-  // При редактировании — показываем текущий тип
-
   return (
     <div className="space-y-5">
       <div>
@@ -57,44 +53,43 @@ function GameForm({ form, children, showKind = true, showStatus = true, showDeta
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
       </div>
 
-      <Field label="Название *" error={errors.title?.message}><input {...register('title')} className={inputClass} placeholder="Название хранилища или игры" /></Field>
+      <Field label="Название *" error={errors.title?.message}>
+        <input {...register('title')} className={inputClass} placeholder={isInsideCollection ? 'Название игры' : 'Название хранилища'} />
+      </Field>
       <Field label="Оригинальное название"><input {...register('titleOriginal')} className={inputClass} /></Field>
 
-      {/* Выбор типа только внутри коллекции */}
       {showKind && isInsideCollection && (
         <div className="bg-surface-hover dark:bg-surface-hover-dark rounded-2xl p-4">
           <label className={labelClass}>Тип игры</label>
           <div className="grid grid-cols-3 gap-2 mt-1">
-            <button type="button" onClick={() => setValue('kind', 'base')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'base' ? 'bg-blue-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>
+            <button type="button" onClick={() => setValue('kind', 'base')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all border ${kind === 'base' ? 'bg-blue-500 text-white border-blue-500 shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border-surface-border dark:border-surface-border-dark hover:border-blue-400'}`}>
               <span className="block text-base mb-0.5">🎯</span>Базовая игра
             </button>
-            <button type="button" onClick={() => setValue('kind', 'expansion')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'expansion' ? 'bg-amber-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>
+            <button type="button" onClick={() => setValue('kind', 'expansion')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all border ${kind === 'expansion' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border-surface-border dark:border-surface-border-dark hover:border-amber-400'}`}>
               <span className="block text-base mb-0.5">📦</span>Дополнение
             </button>
-            <button type="button" onClick={() => setValue('kind', 'standalone')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all ${kind === 'standalone' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>
+            <button type="button" onClick={() => setValue('kind', 'standalone')} className={`py-2.5 px-2 rounded-xl text-xs font-medium transition-all border ${kind === 'standalone' ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border-surface-border dark:border-surface-border-dark hover:border-emerald-400'}`}>
               <span className="block text-base mb-0.5">🎲</span>Самостоятельная
             </button>
           </div>
           <p className="text-[10px] text-surface-muted mt-2">
-            {kind === 'base' && '🎯 Базовая игра — основа, к которой покупаются дополнения'}
-            {kind === 'expansion' && '📦 Дополнение — требует базовую игру (правила, карты и т.д.)'}
-            {kind === 'standalone' && '🎲 Самостоятельная — играется отдельно, не требует базу'}
+            {kind === 'base' ? '🎯 Базовая игра — основа, к которой покупаются дополнения' :
+             kind === 'expansion' ? '📦 Дополнение — требует базовую игру' :
+             '🎲 Самостоятельная — играется отдельно, не требует базу'}
           </p>
         </div>
       )}
 
-      {/* Статус — только не для collection */}
       {showStatus && kind !== 'collection' && (
         <div className="bg-surface-hover dark:bg-surface-hover-dark rounded-2xl p-4">
           <label className={labelClass}>Статус</label>
           <div className="flex gap-2 mt-1">
-            <button type="button" onClick={() => setValue('status', 'owned')} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${status === 'owned' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>✅ Есть</button>
-            <button type="button" onClick={() => setValue('status', 'wishlist')} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${status === 'wishlist' ? 'bg-amber-500 text-white shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border border-surface-border dark:border-surface-border-dark'}`}>🎯 Хочу</button>
+            <button type="button" onClick={() => setValue('status', 'owned')} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border ${status === 'owned' ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border-surface-border dark:border-surface-border-dark hover:border-emerald-400'}`}>✅ Есть</button>
+            <button type="button" onClick={() => setValue('status', 'wishlist')} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border ${status === 'wishlist' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-white dark:bg-surface-card-dark text-surface-muted border-surface-border dark:border-surface-border-dark hover:border-amber-400'}`}>🎯 Хочу</button>
           </div>
         </div>
       )}
 
-      {/* Детали — только не для collection */}
       {showDetails && kind !== 'collection' && (
         <>
           <div className="grid grid-cols-4 gap-3">
