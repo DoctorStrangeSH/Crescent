@@ -108,7 +108,7 @@ function CollectionPage() {
                   )}
                 </div>
                 <div className="p-5">
-                  <h3 className="font-bold text-base text-gray-900 dark:text-white line-clamp-2 leading-snug">{game.title}</h3>
+                  <h3 className="font-bold text-base text-gray-900 dark:text-white line-clamp-2 leading-snug bg-white/90 dark:bg-black/70 backdrop-blur-sm px-3 py-2 rounded-xl -mt-1">{game.title}</h3>
                   <div className="flex items-center justify-between mt-3">
                     {hasContent ? (
                       <>

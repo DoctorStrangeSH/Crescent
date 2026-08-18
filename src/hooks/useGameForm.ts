@@ -62,8 +62,7 @@ export function useGameForm(def?: Partial<GameFormData>) {
     resolver: zodResolver(schema),
     defaultValues: {
       collectionId: cid || null,
-      // ВАЖНО: снаружи — collection (хранилище), внутри — expansion (дополнение)
-      kind: cid ? 'expansion' : 'collection',
+      kind: cid ? 'standalone' : 'collection',
       title: '', titleOriginal: '', year: null, publisher: '', designers: '', artists: '',
       playerCountMin: 1, playerCountMax: 4, playTimeMin: 30, playTimeMax: 60,
       complexity: 2, genres: '', mechanics: '', status: 'owned',

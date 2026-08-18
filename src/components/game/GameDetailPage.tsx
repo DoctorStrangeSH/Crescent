@@ -123,7 +123,7 @@ function GameDetailPage() {
               <div className="w-20 h-20 rounded-2xl bg-surface-hover dark:bg-surface-hover-dark border border-surface-border dark:border-surface-border-dark flex items-center justify-center"><Package className="w-10 h-10 text-surface-muted" /></div>
             )}
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{game.title}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white bg-white/90 dark:bg-black/70 backdrop-blur-sm px-4 py-2 rounded-2xl inline-block">{game.title}</h1>
               {game.titleOriginal && <p className="text-sm text-surface-muted">{game.titleOriginal}</p>}
               <div className="flex items-center gap-2 mt-1.5">
                 {isCollection && <Badge variant="purple">📚 Хранилище</Badge>}
@@ -219,7 +219,7 @@ function GameDetailPage() {
 
       {/* Дополнения */}
       {expansions.length > 0 && (
-        <Section title="Дополнения" icon="📦" collapsed={false} onToggle={() => {}} count={expansions.length} owned={expansions.filter(e => e.status === 'owned').length} zone="expansion" dragOverZone={dragOverZone}
+        <Section title="Дополнения" icon="📦" collapsed={false} onToggle={() => { }} count={expansions.length} owned={expansions.filter(e => e.status === 'owned').length} zone="expansion" dragOverZone={dragOverZone}
           onDrop={(e: React.DragEvent) => handleDropOnZone(e, 'expansion')} onDragOver={(e: React.DragEvent) => handleZoneDragOver(e, 'expansion')} onDragLeave={handleDragLeave} collapsible={false}>
           {expansions.map(e => (
             <GameRow key={e.id} game={e} draggedGameId={draggedGameId} dragOverGameId={dragOverGameId}
